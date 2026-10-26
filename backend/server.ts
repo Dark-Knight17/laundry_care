@@ -11,7 +11,8 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey });
 const CANDIDATE_MODELS = [
   process.env.GEMINI_MODEL || "gemini-3.8-flash",
-  "gemini-flash-lite-latest",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
 ];
 
 const corsHeaders = {
