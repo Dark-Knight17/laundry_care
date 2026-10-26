@@ -5,7 +5,8 @@ and returns plain-language care instructions.
 
 ## Stack
 - Backend: Bun (native TypeScript, no build step for dev) + Bun.serve for HTTP
-- Frontend: TypeScript, browser camera capture via getUserMedia
+- Frontend: React (TypeScript), Bun's native bundler for building — no separate
+  Vite/webpack setup unless Bun's bundler proves insufficient
 - Symbol detection: Gemini API (Flash model, free tier)
 - Symbol → instruction mapping: static JSON lookup table (source of truth),
   typed with a Symbol interface
