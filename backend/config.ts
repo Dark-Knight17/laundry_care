@@ -6,6 +6,8 @@ export const CANDIDATE_MODELS = [
   "gemini-3.6-flash",
 ];
 
+export const SCANS_TABLE = process.env.SUPABASE_SCANS_TABLE || "scans";
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
