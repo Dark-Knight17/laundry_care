@@ -9,7 +9,10 @@ if (!apiKey) {
 }
 
 const ai = new GoogleGenAI({ apiKey });
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const CANDIDATE_MODELS = [
+  process.env.GEMINI_MODEL || "gemini-3.8-flash",
+  "gemini-flash-lite-latest",
+];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,23 +101,55 @@ const server = Bun.serve({
         const base64Data = Buffer.from(arrayBuffer).toString("base64");
         const mimeType = file.type || "image/jpeg";
 
-        const response = await ai.models.generateContent({
-          model: MODEL_NAME,
-          contents: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64Data,
+        let response;
+        let lastError: unknown;
+
+        for (const model of CANDIDATE_MODELS) {
+          try {
+            response = await ai.models.generateContent({
+              model,
+              contents: [
+                {
+                  inlineData: {
+                    mimeType,
+                    data: base64Data,
+                  },
+                },
+                {
+                  text: PROMPT,
+                },
+              ],
+              config: {
+                responseMimeType: "application/json",
               },
-            },
-            {
-              text: PROMPT,
-            },
-          ],
-          config: {
-            responseMimeType: "application/json",
-          },
-        });
+            });
+
+            if (response) {
+              break;
+            }
+          } catch (modelError: any) {
+            lastError = modelError;
+            console.warn(`Model ${model} failed:`, modelError?.status || modelError?.message);
+
+            const isTransient =
+              modelError?.status === 503 ||
+              modelError?.status === 429 ||
+              modelError?.status === 404 ||
+              modelError?.name === "TimeoutError" ||
+              modelError?.message?.includes("high demand");
+
+            if (isTransient) {
+              console.log(`Falling back to next model in candidate list...`);
+              continue;
+            }
+
+            throw modelError;
+          }
+        }
+
+        if (!response) {
+          throw lastError || new Error("All candidate models failed to respond");
+        }
 
         const rawText = response.text ?? "[]";
         let parsed: unknown;
@@ -166,11 +201,20 @@ const server = Bun.serve({
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
-      } catch (geminiError) {
+      } catch (geminiError: any) {
         console.error("Gemini API call failed:", geminiError);
+        const isUnavailable =
+          geminiError?.status === 503 ||
+          geminiError?.message?.includes("high demand");
+
+        const status = isUnavailable ? 503 : 500;
+        const message = isUnavailable
+          ? "Gemini API is currently experiencing high demand. Please try again in a few moments or pick symbols manually."
+          : "Failed to process image with Gemini API";
+
         return new Response(
-          JSON.stringify({ error: "Failed to process image with Gemini API" }),
-          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          JSON.stringify({ error: message }),
+          { status, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
     }
