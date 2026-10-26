@@ -21,3 +21,19 @@ and returns plain-language care instructions.
 
 ## Notes
 
+## Code organization principles
+- Single Responsibility: each file should have one clear job. Routes,
+  business logic, and external service clients (Gemini, Supabase) must
+  live in separate files, not all in server.ts.
+- DRY: if the same logic (e.g. resolving detected symbols to instructions)
+  is needed in more than one place, extract it into a shared function
+  rather than duplicating it.
+- Easier to change: avoid hardcoding values that are likely to change
+  (model names, table names, bucket names) — centralize them as named
+  constants in one config location.
+- Backend structure to follow going forward:
+  backend/
+    server.ts    — HTTP server + route registration only
+    routes/      — one file per route/resource
+    services/    — external integrations (gemini.ts, supabase.ts)
+    lib/         — shared business logic (e.g. symbol resolution)
