@@ -5,6 +5,7 @@ import { ResultsDisplay } from "./ResultsDisplay.tsx";
 export function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedImageUrl, setCapturedImageUrl] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +45,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!scanResult && stream && videoRef.current) {
+    if (!capturedImageUrl && stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch((playErr) => {
         console.error("Video play error:", playErr);
       });
     }
-  }, [scanResult, stream]);
+  }, [capturedImageUrl, stream]);
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -83,6 +84,12 @@ export function App() {
           return;
         }
 
+        if (capturedImageUrl) {
+          URL.revokeObjectURL(capturedImageUrl);
+        }
+
+        const imageUrl = URL.createObjectURL(blob);
+        setCapturedImageUrl(imageUrl);
         setIsLoading(true);
         setError(null);
 
@@ -116,6 +123,8 @@ export function App() {
           const message =
             fetchErr instanceof Error ? fetchErr.message : "Failed to scan laundry tag";
           setError(`Scan error: ${message}`);
+          URL.revokeObjectURL(imageUrl);
+          setCapturedImageUrl(null);
         } finally {
           setIsLoading(false);
         }
@@ -126,6 +135,10 @@ export function App() {
   };
 
   const handleReset = () => {
+    if (capturedImageUrl) {
+      URL.revokeObjectURL(capturedImageUrl);
+      setCapturedImageUrl(null);
+    }
     setScanResult(null);
     setError(null);
   };
@@ -133,6 +146,28 @@ export function App() {
   return (
     <div>
       <h1>Laundry Tag Scanner</h1>
+
+      <div>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            maxWidth: "100%",
+            width: "480px",
+            display: capturedImageUrl ? "none" : "block",
+          }}
+        />
+
+        {capturedImageUrl && (
+          <img
+            src={capturedImageUrl}
+            alt="Captured laundry tag"
+            style={{ maxWidth: "100%", width: "480px", display: "block" }}
+          />
+        )}
+      </div>
 
       {scanResult ? (
         <ResultsDisplay
@@ -142,16 +177,6 @@ export function App() {
         />
       ) : (
         <div>
-          <div>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ maxWidth: "100%", width: "480px", display: "block" }}
-            />
-          </div>
-
           <div style={{ marginTop: "1rem" }}>
             <button type="button" onClick={handleCapture} disabled={isLoading}>
               {isLoading ? "Scanning..." : "Capture"}
