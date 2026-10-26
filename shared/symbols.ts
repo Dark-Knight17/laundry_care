@@ -6,7 +6,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "wash_30_normal",
     category: "wash",
     label: "30°C normal",
-    instruction: "Machine wash at or below 30°C on normal cycle.",
+    instruction:
+      "You can wash this in a washing machine using cool water (up to 30°C) on a regular wash setting.",
     iconDescription:
       "A wash tub basin outline with a wavy water line across the top and the number '30' written in the center.",
   },
@@ -14,7 +15,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "wash_40_normal",
     category: "wash",
     label: "40°C normal",
-    instruction: "Machine wash at or below 40°C on normal cycle.",
+    instruction:
+      "Wash this in a washing machine with warm water (up to 40°C) on a regular wash setting.",
     iconDescription:
       "A wash tub basin outline with a wavy water line across the top and the number '40' written in the center.",
   },
@@ -22,7 +24,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "wash_40_gentle",
     category: "wash",
     label: "40°C gentle",
-    instruction: "Machine wash at or below 40°C on gentle / mild cycle.",
+    instruction:
+      "Wash this in a washing machine with warm water (up to 40°C), but use a soft wash setting to protect the fabric.",
     iconDescription:
       "A wash tub basin outline with a wavy water line, the number '40' in the center, and a single horizontal bar directly underneath the tub.",
   },
@@ -30,7 +33,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "wash_hand",
     category: "wash",
     label: "Hand wash only",
-    instruction: "Hand wash only at a maximum temperature of 40°C; do not machine wash.",
+    instruction:
+      "Wash this by hand in a basin or sink with lukewarm water (up to 40°C). Don't put it in a washing machine.",
     iconDescription:
       "A wash tub basin outline with a wavy water surface and an open hand reaching down into the water.",
   },
@@ -38,7 +42,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "wash_do_not",
     category: "wash",
     label: "Do not wash",
-    instruction: "Do not wash with water.",
+    instruction:
+      "Don't wash this in water or put it in a washing machine at all — it could ruin the fabric.",
     iconDescription:
       "A wash tub basin outline with a wavy water line, crossed out with a large 'X'.",
   },
@@ -48,14 +53,16 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "bleach_any",
     category: "bleach",
     label: "Any bleach allowed",
-    instruction: "Any bleach permitted (both chlorine and non-chlorine bleach).",
+    instruction:
+      "You can safely use any kind of bleach on this if you need to remove stains or brighten it.",
     iconDescription: "A hollow equilateral triangle outline with nothing inside.",
   },
   {
     id: "bleach_non_chlorine",
     category: "bleach",
     label: "Non-chlorine bleach only",
-    instruction: "Use only non-chlorine or oxygen bleach when needed; do not use chlorine bleach.",
+    instruction:
+      "Only use color-safe or non-chlorine bleach when needed. Avoid regular chlorine bleach because it can damage or discolor the fabric.",
     iconDescription:
       "An equilateral triangle outline with two parallel diagonal lines slanting upward from bottom-left toward top-right inside.",
   },
@@ -63,7 +70,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "bleach_do_not",
     category: "bleach",
     label: "Do not bleach",
-    instruction: "Do not bleach or use chlorine-based cleaning agents.",
+    instruction:
+      "Don't use any bleach on this — it will damage the material or ruin the color.",
     iconDescription:
       "An equilateral triangle outline crossed out with a large 'X'.",
   },
@@ -73,7 +81,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_tumble_normal",
     category: "dry",
     label: "Tumble dry normal",
-    instruction: "Tumble dry on normal cycle with medium to high heat.",
+    instruction:
+      "You can dry this in a dryer machine (the one that spins and blows hot air to dry clothes) on a standard heat setting.",
     iconDescription:
       "A square outline containing an inscribed circle with two dots in the center.",
   },
@@ -81,7 +90,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_tumble_low",
     category: "dry",
     label: "Tumble dry low",
-    instruction: "Tumble dry on low heat.",
+    instruction:
+      "You can use a dryer machine (the one that spins and blows hot air to dry clothes), but keep it on a low heat setting so it doesn't shrink or get damaged.",
     iconDescription:
       "A square outline containing an inscribed circle with a single dot in the center.",
   },
@@ -89,7 +99,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_tumble_do_not",
     category: "dry",
     label: "Do not tumble dry",
-    instruction: "Do not tumble dry in a dryer.",
+    instruction:
+      "Don't put this in a dryer machine (the one that spins and blows hot air to dry clothes). Let it dry naturally instead.",
     iconDescription:
       "A square outline containing an inscribed circle, crossed out with a large 'X'.",
   },
@@ -97,7 +108,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_line",
     category: "dry",
     label: "Line dry",
-    instruction: "Line dry / hang to dry outdoors or on a clothesline.",
+    instruction:
+      "Hang this out to dry on a clothesline, hanger, or drying rack.",
     iconDescription:
       "A square outline with a curved line drooping downward like a sagging clothesline from the top corners inside.",
   },
@@ -105,7 +117,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_flat",
     category: "dry",
     label: "Dry flat",
-    instruction: "Dry flat horizontally to preserve garment shape.",
+    instruction:
+      "Lay this flat on a towel or drying rack to dry, rather than hanging it, so it keeps its shape.",
     iconDescription:
       "A square outline containing a single horizontal straight line across the middle.",
   },
@@ -115,7 +128,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "iron_low",
     category: "iron",
     label: "Low heat",
-    instruction: "Iron at a maximum soleplate temperature of 110°C (low heat); steam ironing may cause damage.",
+    instruction:
+      "Iron this on a low iron setting — turn your iron dial to the one-dot (•) mark. Avoid using steam as it might damage the fabric.",
     iconDescription:
       "An iron silhouette outline with a single dot inside the body of the iron.",
   },
@@ -123,7 +137,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "iron_medium",
     category: "iron",
     label: "Medium heat",
-    instruction: "Iron at a maximum soleplate temperature of 150°C (medium heat).",
+    instruction:
+      "Iron this on a medium iron setting — turn your iron dial to the two-dot (••) mark.",
     iconDescription:
       "An iron silhouette outline with two dots arranged horizontally inside the body of the iron.",
   },
@@ -131,7 +146,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "iron_high",
     category: "iron",
     label: "High heat",
-    instruction: "Iron at a maximum soleplate temperature of 200°C (high heat).",
+    instruction:
+      "Iron this on a high iron setting — turn your iron dial to the three-dot (•••) mark.",
     iconDescription:
       "An iron silhouette outline with three dots inside the body of the iron.",
   },
@@ -139,7 +155,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "iron_do_not",
     category: "iron",
     label: "Do not iron",
-    instruction: "Do not iron or steam.",
+    instruction:
+      "Don't iron this or use steam on it — the heat can melt or ruin the fabric.",
     iconDescription:
       "An iron silhouette outline crossed out with a large 'X'.",
   },
@@ -149,7 +166,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_clean_any",
     category: "professional_care",
     label: "Dry clean any solvent",
-    instruction: "Professional dry cleaning in any solvent or standard cleaning solvents.",
+    instruction:
+      "Take this to a dry cleaner for a chemical wash — they can clean it using standard cleaning solvents.",
     iconDescription:
       "A plain circle outline with the letter 'P' or 'A' inside (or an empty circle).",
   },
@@ -157,7 +175,8 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     id: "dry_clean_do_not",
     category: "professional_care",
     label: "Do not dry clean",
-    instruction: "Do not dry clean.",
+    instruction:
+      "Don't take this to a dry cleaner for a chemical wash — dry cleaning chemicals can ruin the garment.",
     iconDescription:
       "A circle outline crossed out with a large 'X'.",
   },
