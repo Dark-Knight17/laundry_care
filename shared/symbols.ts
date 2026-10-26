@@ -43,7 +43,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "wash",
     label: "Do not wash",
     instruction:
-      "Don't wash this in water or put it in a washing machine at all — it could ruin the fabric.",
+      "Don't wash this in water or put it in a washing machine at all, as it could ruin the fabric.",
     iconDescription:
       "A wash tub basin outline with a wavy water line, crossed out with a large 'X'.",
   },
@@ -71,7 +71,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "bleach",
     label: "Do not bleach",
     instruction:
-      "Don't use any bleach on this — it will damage the material or ruin the color.",
+      "Don't use any bleach on this, as it will damage the material or ruin the color.",
     iconDescription:
       "An equilateral triangle outline crossed out with a large 'X'.",
   },
@@ -129,7 +129,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "iron",
     label: "Low heat",
     instruction:
-      "Iron this on a low iron setting — turn your iron dial to the one-dot (•) mark. Avoid using steam as it might damage the fabric.",
+      "Iron this on a low iron setting by turning your iron dial to the one-dot (•) mark. Avoid using steam as it might damage the fabric.",
     iconDescription:
       "An iron silhouette outline with a single dot inside the body of the iron.",
   },
@@ -138,7 +138,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "iron",
     label: "Medium heat",
     instruction:
-      "Iron this on a medium iron setting — turn your iron dial to the two-dot (••) mark.",
+      "Iron this on a medium iron setting by turning your iron dial to the two-dot (••) mark.",
     iconDescription:
       "An iron silhouette outline with two dots arranged horizontally inside the body of the iron.",
   },
@@ -147,7 +147,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "iron",
     label: "High heat",
     instruction:
-      "Iron this on a high iron setting — turn your iron dial to the three-dot (•••) mark.",
+      "Iron this on a high iron setting by turning your iron dial to the three-dot (•••) mark.",
     iconDescription:
       "An iron silhouette outline with three dots inside the body of the iron.",
   },
@@ -156,7 +156,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "iron",
     label: "Do not iron",
     instruction:
-      "Don't iron this or use steam on it — the heat can melt or ruin the fabric.",
+      "Don't iron this or use steam on it, as the heat can melt or ruin the fabric.",
     iconDescription:
       "An iron silhouette outline crossed out with a large 'X'.",
   },
@@ -167,7 +167,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "professional_care",
     label: "Dry clean any solvent",
     instruction:
-      "Take this to a dry cleaner for a chemical wash — they can clean it using standard cleaning solvents.",
+      "Take this to a dry cleaner for a chemical wash, where they can clean it using standard cleaning solvents.",
     iconDescription:
       "A plain circle outline with the letter 'P' or 'A' inside (or an empty circle).",
   },
@@ -176,7 +176,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "professional_care",
     label: "Do not dry clean",
     instruction:
-      "Don't take this to a dry cleaner for a chemical wash — dry cleaning chemicals can ruin the garment.",
+      "Don't take this to a dry cleaner for a chemical wash, as dry cleaning chemicals can ruin the garment.",
     iconDescription:
       "A circle outline crossed out with a large 'X'.",
   },
