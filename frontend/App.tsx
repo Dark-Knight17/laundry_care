@@ -1,27 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ScanResult } from "../shared/types.ts";
+import { ResultsDisplay } from "./ResultsDisplay.tsx";
 
 export function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
+    let active = true;
+    let localStream: MediaStream | null = null;
 
     async function initCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        localStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
         });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch((playErr) => {
-            console.error("Video play error:", playErr);
-          });
+        if (!active) {
+          localStream.getTracks().forEach((track) => track.stop());
+          return;
         }
+
+        setStream(localStream);
       } catch (err: unknown) {
+        if (!active) return;
         console.error("Camera access error:", err);
         const message = err instanceof Error ? err.message : "Unable to access camera";
         setError(`Camera access error: ${message}`);
@@ -31,11 +36,21 @@ export function App() {
     initCamera();
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      active = false;
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!scanResult && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch((playErr) => {
+        console.error("Video play error:", playErr);
+      });
+    }
+  }, [scanResult, stream]);
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -95,6 +110,7 @@ export function App() {
 
           const result: ScanResult = await response.json();
           console.log("ScanResult:", result);
+          setScanResult(result);
         } catch (fetchErr: unknown) {
           console.error("Scan request failed:", fetchErr);
           const message =
@@ -109,28 +125,39 @@ export function App() {
     );
   };
 
+  const handleReset = () => {
+    setScanResult(null);
+    setError(null);
+  };
+
   return (
     <div>
       <h1>Laundry Tag Scanner</h1>
 
-      <div>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ maxWidth: "100%", width: "480px", display: "block" }}
-        />
-      </div>
+      {scanResult ? (
+        <ResultsDisplay result={scanResult} onReset={handleReset} />
+      ) : (
+        <div>
+          <div>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ maxWidth: "100%", width: "480px", display: "block" }}
+            />
+          </div>
 
-      <div style={{ marginTop: "1rem" }}>
-        <button type="button" onClick={handleCapture} disabled={isLoading}>
-          {isLoading ? "Scanning..." : "Capture"}
-        </button>
-      </div>
+          <div style={{ marginTop: "1rem" }}>
+            <button type="button" onClick={handleCapture} disabled={isLoading}>
+              {isLoading ? "Scanning..." : "Capture"}
+            </button>
+          </div>
 
-      {isLoading && <p>Scanning tag, please wait...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+          {isLoading && <p>Scanning tag, please wait...</p>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
+        </div>
+      )}
     </div>
   );
 }
