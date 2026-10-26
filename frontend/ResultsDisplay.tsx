@@ -9,6 +9,8 @@ interface ResultsDisplayProps {
   onUpdateResult?: (updated: ScanResult) => void;
 }
 
+const MONOSPACE_FONT = '"SFMono-Regular", "Consolas", "Menlo", monospace';
+
 export function ResultsDisplay({
   result,
   onReset,
@@ -62,6 +64,7 @@ export function ResultsDisplay({
             backgroundColor: "#fff3cd",
             border: "1px solid #ffeeba",
             color: "#856404",
+            fontFamily: MONOSPACE_FONT,
           }}
         >
           <strong>Notice:</strong> Some detections were uncertain. Please double check
@@ -70,7 +73,7 @@ export function ResultsDisplay({
       )}
 
       {result.instructions.length > 0 ? (
-        <ul>
+        <ul style={{ fontFamily: MONOSPACE_FONT }}>
           {result.instructions.map((instruction, index) => (
             <li key={index} style={{ marginBottom: "0.5rem" }}>
               {instruction}
@@ -78,7 +81,7 @@ export function ResultsDisplay({
           ))}
         </ul>
       ) : (
-        <p>No care instructions detected.</p>
+        <p style={{ fontFamily: MONOSPACE_FONT }}>No care instructions detected.</p>
       )}
 
       <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
