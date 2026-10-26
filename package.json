@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "typecheck": "bun check",
-    "build:frontend": "bun build frontend/index.html --outdir frontend/dist",
+    "build:frontend": "bun build frontend/index.html --outdir frontend/dist --env=inline",
     "dev:frontend": "bun --hot frontend/index.html"
   },
   "devDependencies": {

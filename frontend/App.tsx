@@ -1,10 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import type { ScanResult } from "../shared/types.ts";
+import { Auth } from "./Auth.tsx";
 import { ResultsDisplay } from "./ResultsDisplay.tsx";
+import { supabase } from "./services/supabaseClient.ts";
 
 type CaptureStep = "garment" | "tag";
 
 export function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -19,6 +25,31 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setIsAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
+      return;
+    }
+
     let active = true;
     let localStream: MediaStream | null = null;
 
@@ -50,7 +81,7 @@ export function App() {
         localStream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [session]);
 
   const isFrozen =
     (step === "garment" && garmentImageUrl !== null) ||
@@ -198,9 +229,55 @@ export function App() {
     setStep("garment");
   };
 
+  const handleSignOut = async () => {
+    handleReset();
+    await supabase.auth.signOut();
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <p>Checking authentication...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div>
+        <h1 style={{ textAlign: "center" }}>Laundry Tag Scanner</h1>
+        <Auth />
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h1>Laundry Tag Scanner</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1rem",
+          maxWidth: "480px",
+        }}
+      >
+        <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Laundry Tag Scanner</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {session.user.email && (
+            <span style={{ fontSize: "0.85rem", color: "#666" }}>
+              {session.user.email}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
 
       {scanResult ? (
         <div>
