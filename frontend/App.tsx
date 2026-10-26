@@ -135,7 +135,11 @@ export function App() {
       <h1>Laundry Tag Scanner</h1>
 
       {scanResult ? (
-        <ResultsDisplay result={scanResult} onReset={handleReset} />
+        <ResultsDisplay
+          result={scanResult}
+          onReset={handleReset}
+          onUpdateResult={setScanResult}
+        />
       ) : (
         <div>
           <div>
