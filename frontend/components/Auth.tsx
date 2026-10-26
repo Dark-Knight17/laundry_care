@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "./services/supabaseClient.ts";
+import { supabase } from "../services/supabaseClient.ts";
 
 export function Auth() {
   const [email, setEmail] = useState("");

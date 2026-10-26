@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { getSymbolById } from "../shared/symbols.ts";
-import type { DetectedSymbol, ScanResult } from "../shared/types.ts";
+import { MONOSPACE_FONT } from "../config.ts";
+import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
+import type { ScanResult } from "../../shared/types.ts";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
 
 interface ResultsDisplayProps {
@@ -8,8 +9,6 @@ interface ResultsDisplayProps {
   onReset: () => void;
   onUpdateResult?: (updated: ScanResult) => void;
 }
-
-const MONOSPACE_FONT = '"SFMono-Regular", "Consolas", "Menlo", monospace';
 
 export function ResultsDisplay({
   result,
@@ -19,23 +18,7 @@ export function ResultsDisplay({
   const [isPicking, setIsPicking] = useState<boolean>(false);
 
   const handleApplyManual = (selectedIds: string[]) => {
-    const instructions: string[] = [];
-    const detected: DetectedSymbol[] = [];
-
-    for (const id of selectedIds) {
-      const symbol = getSymbolById(id);
-      if (symbol) {
-        instructions.push(symbol.instruction);
-        detected.push({ symbolId: id, confidence: "high" });
-      }
-    }
-
-    const updated: ScanResult = {
-      detected,
-      instructions,
-      lowConfidenceWarning: false,
-    };
-
+    const updated = resolveSymbolsToScanResult(selectedIds);
     if (onUpdateResult) {
       onUpdateResult(updated);
     }
