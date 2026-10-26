@@ -21,31 +21,73 @@ export function ManualSymbolPicker({
   onApply,
   onCancel,
 }: ManualSymbolPickerProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [selections, setSelections] = useState<Record<SymbolCategory, string | null>>(() => {
+    const initial: Record<SymbolCategory, string | null> = {
+      wash: null,
+      bleach: null,
+      dry: null,
+      iron: null,
+      professional_care: null,
+    };
+    for (const id of initialSelectedIds) {
+      const symbol = CARE_SYMBOLS.find((s) => s.id === id);
+      if (symbol && !initial[symbol.category]) {
+        initial[symbol.category] = symbol.id;
+      }
+    }
+    return initial;
+  });
 
-  const handleToggle = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const handleSelect = (category: SymbolCategory, symbolId: string | null) => {
+    setSelections((prev) => ({
+      ...prev,
+      [category]: symbolId,
+    }));
   };
 
   const handleApply = () => {
+    const selectedIds = Object.values(selections).filter(
+      (id): id is string => id !== null
+    );
     onApply(selectedIds);
   };
 
   return (
     <div>
       <h3>Pick Symbols Manually</h3>
-      <p>Select the symbols that match your garment care tag:</p>
+      <p>Select one symbol per category (or None):</p>
 
       {CATEGORIES.map(({ key, title }) => {
         const symbols = CARE_SYMBOLS.filter((s) => s.category === key);
+        const currentSelection = selections[key];
+
         return (
           <div key={key} style={{ marginBottom: "1rem" }}>
             <h4>{title}</h4>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  padding: "0.25rem 0.5rem",
+                  border: "1px solid #ccc",
+                  cursor: "pointer",
+                  backgroundColor: currentSelection === null ? "#eee" : "transparent",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`category-${key}`}
+                  value=""
+                  checked={currentSelection === null}
+                  onChange={() => handleSelect(key, null)}
+                />
+                None
+              </label>
+
               {symbols.map((symbol) => {
-                const isSelected = selectedIds.includes(symbol.id);
+                const isSelected = currentSelection === symbol.id;
                 return (
                   <label
                     key={symbol.id}
@@ -60,9 +102,11 @@ export function ManualSymbolPicker({
                     }}
                   >
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name={`category-${key}`}
+                      value={symbol.id}
                       checked={isSelected}
-                      onChange={() => handleToggle(symbol.id)}
+                      onChange={() => handleSelect(key, symbol.id)}
                     />
                     {symbol.label}
                   </label>
