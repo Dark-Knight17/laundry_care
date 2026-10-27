@@ -1,6 +1,31 @@
 import { corsHeaders } from "../config.ts";
 import type { AuthenticatedRequest } from "../middleware/auth.ts";
-import { createScanRecord, uploadGarmentPhoto } from "../services/supabase.ts";
+import {
+  createScanRecord,
+  listUserScans,
+  uploadGarmentPhoto,
+} from "../services/supabase.ts";
+
+export async function handleListScans(
+  req: AuthenticatedRequest
+): Promise<Response> {
+  try {
+    const scans = await listUserScans(req.userId);
+    return new Response(JSON.stringify(scans), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  } catch (err: any) {
+    console.error("Failed to list scans:", err);
+    return new Response(
+      JSON.stringify({ error: err.message || "Failed to list scans" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
+}
 
 export async function handleCreateScan(
   req: AuthenticatedRequest

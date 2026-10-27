@@ -2,7 +2,7 @@ import { PORT, corsHeaders } from "./config.ts";
 import { requireAuth } from "./middleware/auth.ts";
 import { handleDbHealth, handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
-import { handleCreateScan } from "./routes/scans.ts";
+import { handleCreateScan, handleListScans } from "./routes/scans.ts";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -37,6 +37,10 @@ const server = Bun.serve({
 
     if (req.method === "GET" && url.pathname === "/health/db") {
       return handleDbHealth();
+    }
+
+    if (req.method === "GET" && url.pathname === "/scans") {
+      return requireAuth(handleListScans)(req);
     }
 
     if (req.method === "POST" && url.pathname === "/scan") {

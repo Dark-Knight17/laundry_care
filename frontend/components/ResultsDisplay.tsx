@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MONOSPACE_FONT } from "../config.ts";
 import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
-import { saveScan } from "../services/api.ts";
+import { saveScan, type SavedScan } from "../services/api.ts";
 import type { ScanResult } from "../../shared/types.ts";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
 
@@ -9,18 +9,24 @@ interface ResultsDisplayProps {
   result: ScanResult;
   garmentBlob?: Blob | null;
   onReset: () => void;
+  resetLabel?: string;
   onUpdateResult?: (updated: ScanResult) => void;
+  onSaveSuccess?: (savedRecord: SavedScan) => void;
 }
 
 export function ResultsDisplay({
   result,
   garmentBlob,
   onReset,
+  resetLabel,
   onUpdateResult,
+  onSaveSuccess,
 }: ResultsDisplayProps) {
   const [isPicking, setIsPicking] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
+    "idle"
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleApplyManual = (selectedIds: string[]) => {
@@ -43,8 +49,13 @@ export function ResultsDisplay({
     setSaveError(null);
 
     try {
-      await saveScan(garmentBlob, result);
+      const saved = await saveScan(garmentBlob, result);
       setSaveStatus("success");
+      if (onSaveSuccess) {
+        setTimeout(() => {
+          onSaveSuccess(saved);
+        }, 600);
+      }
     } catch (err: unknown) {
       console.error("Save scan failed:", err);
       setSaveStatus("error");
@@ -97,11 +108,13 @@ export function ResultsDisplay({
         <p style={{ fontFamily: MONOSPACE_FONT }}>No care instructions detected.</p>
       )}
 
-      <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
-        <button type="button" onClick={() => setIsPicking(true)}>
-          Symbol looks wrong? Pick manually
-        </button>
-      </div>
+      {onUpdateResult && (
+        <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
+          <button type="button" onClick={() => setIsPicking(true)}>
+            Symbol looks wrong? Pick manually
+          </button>
+        </div>
+      )}
 
       <div
         style={{
@@ -111,22 +124,24 @@ export function ResultsDisplay({
           alignItems: "center",
         }}
       >
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving || saveStatus === "success"}
-          style={{ padding: "0.5rem 1rem", fontWeight: "bold" }}
-        >
-          {isSaving ? "Saving..." : saveStatus === "success" ? "Saved" : "Save"}
-        </button>
+        {garmentBlob && (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || saveStatus === "success"}
+            style={{ padding: "0.5rem 1rem", fontWeight: "bold" }}
+          >
+            {isSaving ? "Saving..." : saveStatus === "success" ? "Saved" : "Save"}
+          </button>
+        )}
         <button type="button" onClick={onReset} style={{ padding: "0.5rem 1rem" }}>
-          Scan another
+          {resetLabel || "Scan another"}
         </button>
       </div>
 
       {saveStatus === "success" && (
         <p style={{ color: "#2e7d32", marginTop: "0.5rem" }}>
-          Scan saved successfully!
+          Scan saved successfully! Returning to gallery...
         </p>
       )}
 

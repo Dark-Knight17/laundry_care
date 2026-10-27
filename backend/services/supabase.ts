@@ -94,3 +94,50 @@ export async function createScanRecord(scanData: {
 
   return data;
 }
+
+/**
+ * Lists all scans belonging to a user, ordered newest first, with accessible signed photo URLs.
+ */
+export async function listUserScans(userId: string) {
+  const { data, error } = await supabase
+    .from(SCANS_TABLE)
+    .select("id, garment_photo_url, detected_symbols, instructions, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to list scans: ${error.message}`);
+  }
+
+  const enriched = await Promise.all(
+    (data || []).map(async (scan) => {
+      let path = scan.garment_photo_url;
+      if (path && path.startsWith("http")) {
+        const marker = `/${GARMENT_PHOTOS_BUCKET}/`;
+        const markerHyphen = `/${GARMENT_PHOTOS_BUCKET.replace(/_/g, "-")}/`;
+        if (path.includes(marker)) {
+          path = path.substring(path.indexOf(marker) + marker.length);
+        } else if (path.includes(markerHyphen)) {
+          path = path.substring(path.indexOf(markerHyphen) + markerHyphen.length);
+        }
+      }
+
+      if (path && !path.startsWith("http")) {
+        const { data: signed } = await supabase.storage
+          .from(GARMENT_PHOTOS_BUCKET)
+          .createSignedUrl(path, 86400); // 24 hours
+
+        if (signed?.signedUrl) {
+          return {
+            ...scan,
+            garment_photo_url: signed.signedUrl,
+          };
+        }
+      }
+
+      return scan;
+    })
+  );
+
+  return enriched;
+}
