@@ -1,8 +1,11 @@
 import { corsHeaders } from "../config.ts";
 import { resolveScanResult } from "../lib/resolution.ts";
+import type { AuthenticatedRequest } from "../middleware/auth.ts";
 import { detectCareSymbols } from "../services/gemini.ts";
 
-export async function handleScan(req: Request): Promise<Response> {
+export async function handleScan(
+  req: AuthenticatedRequest | Request
+): Promise<Response> {
   const contentType = req.headers.get("content-type") || "";
   if (!contentType.includes("multipart/form-data")) {
     return new Response(

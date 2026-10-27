@@ -1,4 +1,5 @@
 import { PORT, corsHeaders } from "./config.ts";
+import { requireAuth } from "./middleware/auth.ts";
 import { handleDbHealth, handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
 
@@ -38,7 +39,7 @@ const server = Bun.serve({
     }
 
     if (req.method === "POST" && url.pathname === "/scan") {
-      return handleScan(req);
+      return requireAuth(handleScan)(req);
     }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders });

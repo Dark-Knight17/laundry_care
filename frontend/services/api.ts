@@ -1,12 +1,28 @@
 import { API_BASE_URL } from "../config.ts";
+import { supabase } from "./supabaseClient.ts";
 import type { ScanResult } from "../../shared/types.ts";
 
-export async function scanCareTag(imageBlob: Blob): Promise<ScanResult> {
+export async function scanCareTag(
+  imageBlob: Blob,
+  accessToken?: string
+): Promise<ScanResult> {
   const formData = new FormData();
   formData.append("image", imageBlob, "tag.jpg");
 
+  let token = accessToken;
+  if (!token) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  }
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/scan`, {
     method: "POST",
+    headers,
     body: formData,
   });
 
