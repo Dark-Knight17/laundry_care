@@ -2,6 +2,7 @@ import { PORT, corsHeaders } from "./config.ts";
 import { requireAuth } from "./middleware/auth.ts";
 import { handleDbHealth, handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
+import { handleCreateScan } from "./routes/scans.ts";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -40,6 +41,10 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/scan") {
       return requireAuth(handleScan)(req);
+    }
+
+    if (req.method === "POST" && url.pathname === "/scans") {
+      return requireAuth(handleCreateScan)(req);
     }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders });

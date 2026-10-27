@@ -8,6 +8,9 @@ export const CANDIDATE_MODELS = [
 
 export const SCANS_TABLE = process.env.SUPABASE_SCANS_TABLE || "scans";
 
+export const GARMENT_PHOTOS_BUCKET =
+  process.env.SUPABASE_GARMENT_PHOTOS_BUCKET || "garment_photos";
+
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",

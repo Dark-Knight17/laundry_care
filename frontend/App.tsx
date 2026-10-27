@@ -157,6 +157,7 @@ export function App() {
 
           <ResultsDisplay
             result={scanResult}
+            garmentBlob={garmentBlob}
             onReset={handleReset}
             onUpdateResult={setScanResult}
           />
