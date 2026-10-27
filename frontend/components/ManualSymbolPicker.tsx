@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CARE_SYMBOLS } from "../../shared/symbols.ts";
-import type { CareSymbol } from "../../shared/types.ts";
+import type { SymbolCategory } from "../../shared/types.ts";
 
 interface ManualSymbolPickerProps {
   initialSelectedIds: string[];
@@ -8,78 +8,110 @@ interface ManualSymbolPickerProps {
   onCancel: () => void;
 }
 
+const CATEGORIES: { key: SymbolCategory; title: string }[] = [
+  { key: "wash", title: "Wash" },
+  { key: "bleach", title: "Bleach" },
+  { key: "dry", title: "Dry" },
+  { key: "iron", title: "Iron" },
+  { key: "professional_care", title: "Professional Care" },
+];
+
 export function ManualSymbolPicker({
   initialSelectedIds,
   onApply,
   onCancel,
 }: ManualSymbolPickerProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
+  const [selections, setSelections] = useState<
+    Record<SymbolCategory, string | null>
+  >(() => {
+    const initial: Record<SymbolCategory, string | null> = {
+      wash: null,
+      bleach: null,
+      dry: null,
+      iron: null,
+      professional_care: null,
+    };
+    for (const id of initialSelectedIds) {
+      const symbol = CARE_SYMBOLS.find((s) => s.id === id);
+      if (symbol && !initial[symbol.category]) {
+        initial[symbol.category] = symbol.id;
+      }
+    }
+    return initial;
+  });
 
-  const toggleSymbol = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const handleSelect = (category: SymbolCategory, symbolId: string | null) => {
+    setSelections((prev) => ({
+      ...prev,
+      [category]: symbolId,
+    }));
   };
 
-  const categories = ["wash", "bleach", "dry", "iron", "dryclean"] as const;
-
-  const categoryLabels: Record<string, string> = {
-    wash: "Washing",
-    bleach: "Bleaching",
-    dry: "Drying",
-    iron: "Ironing",
-    dryclean: "Professional Care",
+  const handleApply = () => {
+    const selectedIds = Object.values(selections).filter(
+      (id): id is string => id !== null
+    );
+    onApply(selectedIds);
   };
 
   return (
     <div>
-      <h2>Select Symbols Manually</h2>
-      <p>Select all symbols shown on your garment care tag:</p>
+      <h3>Pick Symbols Manually</h3>
+      <p>Select one symbol per category (or None):</p>
 
-      {categories.map((category) => {
-        const categorySymbols = CARE_SYMBOLS.filter(
-          (sym: CareSymbol) => sym.category === category
-        );
+      {CATEGORIES.map(({ key, title }) => {
+        const symbols = CARE_SYMBOLS.filter((s) => s.category === key);
+        const currentSelection = selections[key];
 
         return (
-          <div key={category} style={{ marginBottom: "1.5rem" }}>
-            <h3 style={{ textTransform: "capitalize", marginBottom: "0.5rem" }}>
-              {categoryLabels[category] || category}
-            </h3>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                gap: "0.5rem",
-              }}
-            >
-              {categorySymbols.map((sym: CareSymbol) => {
-                const isChecked = selectedIds.includes(sym.id);
+          <div key={key} style={{ marginBottom: "1rem" }}>
+            <h4>{title}</h4>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  padding: "0.25rem 0.5rem",
+                  border: "1px solid #ccc",
+                  cursor: "pointer",
+                  backgroundColor:
+                    currentSelection === null ? "#eee" : "transparent",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`category-${key}`}
+                  value=""
+                  checked={currentSelection === null}
+                  onChange={() => handleSelect(key, null)}
+                />
+                None
+              </label>
+
+              {symbols.map((symbol) => {
+                const isSelected = currentSelection === symbol.id;
                 return (
                   <label
-                    key={sym.id}
+                    key={symbol.id}
                     style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      padding: "0.5rem",
-                      border: isChecked ? "2px solid #0066cc" : "1px solid #ccc",
-                      borderRadius: "4px",
-                      backgroundColor: isChecked ? "#e6f2ff" : "#fff",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                      padding: "0.25rem 0.5rem",
+                      border: "1px solid #ccc",
                       cursor: "pointer",
+                      backgroundColor: isSelected ? "#eee" : "transparent",
                     }}
                   >
                     <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleSymbol(sym.id)}
-                      style={{ marginRight: "0.5rem", marginTop: "0.25rem" }}
+                      type="radio"
+                      name={`category-${key}`}
+                      value={symbol.id}
+                      checked={isSelected}
+                      onChange={() => handleSelect(key, symbol.id)}
                     />
-                    <div>
-                      <strong>{sym.label}</strong>
-                      <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                        {sym.instruction}
-                      </div>
-                    </div>
+                    {symbol.label}
                   </label>
                 );
               })}
@@ -88,19 +120,11 @@ export function ManualSymbolPicker({
         );
       })}
 
-      <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-        <button
-          type="button"
-          onClick={() => onApply(selectedIds)}
-          style={{ padding: "0.5rem 1rem" }}
-        >
-          Apply Selection
+      <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
+        <button type="button" onClick={handleApply}>
+          Apply
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{ padding: "0.5rem 1rem" }}
-        >
+        <button type="button" onClick={onCancel}>
           Cancel
         </button>
       </div>
