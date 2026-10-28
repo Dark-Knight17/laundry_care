@@ -153,16 +153,26 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
 
   return (
     <div>
-      <div>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "480px",
+          borderRadius: "16px",
+          overflow: "hidden",
+          backgroundColor: "var(--color-surface)",
+          border: "1px solid rgba(245, 241, 232, 0.15)",
+        }}
+      >
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
           style={{
-            maxWidth: "100%",
-            width: "480px",
+            width: "100%",
             display: isFrozen ? "none" : "block",
+            borderRadius: "16px",
+            objectFit: "cover",
           }}
         />
 
@@ -170,7 +180,12 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
           <img
             src={garmentImageUrl}
             alt="Captured garment"
-            style={{ maxWidth: "100%", width: "480px", display: "block" }}
+            style={{
+              width: "100%",
+              display: "block",
+              borderRadius: "16px",
+              objectFit: "cover",
+            }}
           />
         )}
 
@@ -178,7 +193,12 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
           <img
             src={tagImageUrl}
             alt="Captured care tag"
-            style={{ maxWidth: "100%", width: "480px", display: "block" }}
+            style={{
+              width: "100%",
+              display: "block",
+              borderRadius: "16px",
+              objectFit: "cover",
+            }}
           />
         )}
       </div>
