@@ -4,10 +4,12 @@
   --color-accent: #7C8FE0;
   --color-accent-secondary: #E0B864;
   --color-text: #D4D4D4;
+  --color-icon: #D3D3D3;
   --color-positive: #9FB98F;
   --color-caution: #B14A3E;
 
   --spacing-screen-edge: 16px;
+  --top-bar-height: 60px;
 
   --font-heading: 'DM Serif Display', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -58,6 +60,65 @@ input {
 input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+
+/* Fixed full-width Top Bar (Google Photos inspired) */
+.top-bar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-surface);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.top-bar-inner {
+  max-width: 680px;
+  height: var(--top-bar-height);
+  margin: 0 auto;
+  padding: 0 var(--spacing-screen-edge);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.top-bar-wordmark {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: normal;
+  color: var(--color-accent);
+  letter-spacing: -0.01em;
+  user-select: none;
+}
+
+.account-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  border: 1px solid rgba(212, 212, 212, 0.2);
+  color: var(--color-icon);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.account-icon-btn:hover {
+  background-color: rgba(124, 143, 224, 0.15);
+  border-color: var(--color-accent);
+}
+
+.account-icon-btn:active {
+  transform: scale(0.95);
 }
 
 /* Gallery grid - dense, responsive auto-fill */

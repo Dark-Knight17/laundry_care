@@ -166,65 +166,41 @@ export function App() {
         flexDirection: "column",
         paddingLeft: "var(--spacing-screen-edge)",
         paddingRight: "var(--spacing-screen-edge)",
+        paddingTop:
+          "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
       }}
     >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "1rem 0 0.85rem 0",
-          borderBottom: "1px solid var(--color-surface)",
-          backgroundColor: "var(--color-bg)",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-heading)",
-            fontSize: "1.55rem",
-            fontWeight: "normal",
-            color: "var(--color-accent)",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Laundry Tag Scanner
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {session.user.email && (
-            <span
-              style={{
-                fontSize: "0.8rem",
-                color: "var(--color-text)",
-                opacity: 0.65,
-                fontFamily: "var(--font-sans)",
-              }}
-            >
-              {session.user.email}
-            </span>
-          )}
+      {/* Fixed top bar with Google Photos layout and Notion-style neutral icons */}
+      <header className="top-bar-fixed">
+        <div className="top-bar-inner">
+          <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
           <button
             type="button"
             onClick={handleSignOut}
-            style={{
-              padding: "0.3rem 0.65rem",
-              fontSize: "0.8rem",
-              fontFamily: "var(--font-sans)",
-              fontWeight: 500,
-              background: "var(--color-surface)",
-              color: "var(--color-text)",
-              border: "1px solid rgba(212, 212, 212, 0.15)",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
+            className="account-icon-btn"
+            aria-label={`Signed in as ${session.user.email || "user"}. Tap to sign out.`}
+            title={`Signed in as ${session.user.email || "user"} (Tap to sign out)`}
           >
-            Sign out
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--color-icon)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
           </button>
         </div>
       </header>
 
       {mode === "gallery" && (
-        <main style={{ flex: 1, paddingTop: "var(--spacing-screen-edge)" }}>
+        <main style={{ flex: 1 }}>
           <GalleryView
             scans={savedScans}
             isLoading={isScansLoading}
@@ -238,7 +214,7 @@ export function App() {
       )}
 
       {mode === "capture" && (
-        <main style={{ flex: 1, padding: "1rem 0" }}>
+        <main style={{ flex: 1, paddingBottom: "2rem" }}>
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               type="button"
@@ -264,7 +240,7 @@ export function App() {
       )}
 
       {mode === "results" && scanResult && (
-        <main style={{ flex: 1, padding: "1rem 0" }}>
+        <main style={{ flex: 1, paddingBottom: "2rem" }}>
           <div
             style={{
               display: "flex",
@@ -320,7 +296,7 @@ export function App() {
       )}
 
       {mode === "saved_detail" && selectedSavedScan && (
-        <main style={{ flex: 1, padding: "1rem 0" }}>
+        <main style={{ flex: 1, paddingBottom: "2rem" }}>
           <div style={{ marginBottom: "1rem" }}>
             <button
               type="button"
