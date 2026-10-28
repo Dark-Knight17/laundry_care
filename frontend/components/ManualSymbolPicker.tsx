@@ -72,11 +72,22 @@ export function ManualSymbolPicker({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "0.25rem",
-                  padding: "0.25rem 0.5rem",
-                  border: "1px solid #ccc",
+                  padding: "0.35rem 0.65rem",
+                  border: `1px solid ${
+                    currentSelection === null
+                      ? "var(--color-accent)"
+                      : "rgba(245, 241, 232, 0.2)"
+                  }`,
+                  borderRadius: "6px",
                   cursor: "pointer",
                   backgroundColor:
-                    currentSelection === null ? "#eee" : "transparent",
+                    currentSelection === null
+                      ? "var(--color-surface)"
+                      : "transparent",
+                  color:
+                    currentSelection === null
+                      ? "var(--color-accent)"
+                      : "var(--color-text)",
                 }}
               >
                 <input
@@ -98,10 +109,20 @@ export function ManualSymbolPicker({
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "0.25rem",
-                      padding: "0.25rem 0.5rem",
-                      border: "1px solid #ccc",
+                      padding: "0.35rem 0.65rem",
+                      border: `1px solid ${
+                        isSelected
+                          ? "var(--color-accent)"
+                          : "rgba(245, 241, 232, 0.2)"
+                      }`,
+                      borderRadius: "6px",
                       cursor: "pointer",
-                      backgroundColor: isSelected ? "#eee" : "transparent",
+                      backgroundColor: isSelected
+                        ? "var(--color-surface)"
+                        : "transparent",
+                      color: isSelected
+                        ? "var(--color-accent)"
+                        : "var(--color-text)",
                     }}
                   >
                     <input
@@ -120,11 +141,32 @@ export function ManualSymbolPicker({
         );
       })}
 
-      <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
-        <button type="button" onClick={handleApply}>
+      <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.75rem" }}>
+        <button
+          type="button"
+          onClick={handleApply}
+          style={{
+            padding: "0.5rem 1.25rem",
+            backgroundColor: "var(--color-accent)",
+            color: "var(--color-bg)",
+            fontWeight: 600,
+            border: "none",
+            borderRadius: "6px",
+          }}
+        >
           Apply
         </button>
-        <button type="button" onClick={onCancel}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: "0.5rem 1rem",
+            backgroundColor: "var(--color-surface)",
+            color: "var(--color-text)",
+            border: "1px solid rgba(245, 241, 232, 0.2)",
+            borderRadius: "6px",
+          }}
+        >
           Cancel
         </button>
       </div>

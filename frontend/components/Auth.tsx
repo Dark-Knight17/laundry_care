@@ -67,7 +67,7 @@ export function Auth() {
   return (
     <div style={{ maxWidth: "380px", margin: "2rem auto", padding: "1rem" }}>
       <h2>Sign In / Sign Up</h2>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>
+      <p style={{ color: "var(--color-text)", opacity: 0.7, fontSize: "0.9rem" }}>
         Enter your email and password to access the scanner.
       </p>
 
@@ -90,6 +90,10 @@ export function Auth() {
               width: "100%",
               padding: "0.5rem",
               boxSizing: "border-box",
+              backgroundColor: "var(--color-surface)",
+              color: "var(--color-text)",
+              border: "1px solid rgba(245, 241, 232, 0.2)",
+              borderRadius: "6px",
             }}
           />
         </div>
@@ -112,19 +116,43 @@ export function Auth() {
               width: "100%",
               padding: "0.5rem",
               boxSizing: "border-box",
+              backgroundColor: "var(--color-surface)",
+              color: "var(--color-text)",
+              border: "1px solid rgba(245, 241, 232, 0.2)",
+              borderRadius: "6px",
             }}
           />
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.25rem" }}>
-          <button type="submit" disabled={isLoading} style={{ flex: 1, padding: "0.5rem" }}>
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={{
+              flex: 1,
+              padding: "0.5rem",
+              backgroundColor: "var(--color-accent)",
+              color: "var(--color-bg)",
+              fontWeight: 600,
+              border: "none",
+              borderRadius: "6px",
+            }}
+          >
             {isLoading ? "Signing in..." : "Sign in"}
           </button>
           <button
             type="button"
             onClick={handleSignUp}
             disabled={isLoading}
-            style={{ flex: 1, padding: "0.5rem" }}
+            style={{
+              flex: 1,
+              padding: "0.5rem",
+              backgroundColor: "var(--color-surface)",
+              color: "var(--color-text)",
+              fontWeight: 600,
+              border: "1px solid rgba(245, 241, 232, 0.2)",
+              borderRadius: "6px",
+            }}
           >
             Sign up
           </button>
@@ -136,9 +164,10 @@ export function Auth() {
           style={{
             marginTop: "1rem",
             padding: "0.5rem",
-            backgroundColor: "#ffebee",
-            color: "#c62828",
-            border: "1px solid #ffcdd2",
+            backgroundColor: "rgba(177, 74, 62, 0.15)",
+            color: "var(--color-caution)",
+            border: "1px solid var(--color-caution)",
+            borderRadius: "6px",
             fontSize: "0.9rem",
           }}
         >
@@ -151,9 +180,10 @@ export function Auth() {
           style={{
             marginTop: "1rem",
             padding: "0.5rem",
-            backgroundColor: "#e8f5e9",
-            color: "#2e7d32",
-            border: "1px solid #c8e6c9",
+            backgroundColor: "rgba(159, 185, 143, 0.15)",
+            color: "var(--color-positive)",
+            border: "1px solid var(--color-positive)",
+            borderRadius: "6px",
             fontSize: "0.9rem",
           }}
         >

@@ -189,15 +189,47 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
           <p>Photograph the whole garment first.</p>
 
           {!garmentImageUrl ? (
-            <button type="button" onClick={handleCaptureGarment}>
+            <button
+              type="button"
+              onClick={handleCaptureGarment}
+              style={{
+                padding: "0.6rem 1.25rem",
+                backgroundColor: "var(--color-accent)",
+                color: "var(--color-bg)",
+                fontWeight: 600,
+                border: "none",
+                borderRadius: "6px",
+              }}
+            >
               Capture Garment
             </button>
           ) : (
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="button" onClick={handleProceedToTag}>
+              <button
+                type="button"
+                onClick={handleProceedToTag}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  backgroundColor: "var(--color-accent)",
+                  color: "var(--color-bg)",
+                  fontWeight: 600,
+                  border: "none",
+                  borderRadius: "6px",
+                }}
+              >
                 Next: Photograph care tag
               </button>
-              <button type="button" onClick={handleRetakeGarment}>
+              <button
+                type="button"
+                onClick={handleRetakeGarment}
+                style={{
+                  padding: "0.6rem 1rem",
+                  backgroundColor: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  border: "1px solid rgba(245, 241, 232, 0.2)",
+                  borderRadius: "6px",
+                }}
+              >
                 Retake photo
               </button>
             </div>
@@ -212,13 +244,32 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
 
           {!tagImageUrl ? (
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button type="button" onClick={handleCaptureTag} disabled={isLoading}>
+              <button
+                type="button"
+                onClick={handleCaptureTag}
+                disabled={isLoading}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  backgroundColor: "var(--color-accent)",
+                  color: "var(--color-bg)",
+                  fontWeight: 600,
+                  border: "none",
+                  borderRadius: "6px",
+                }}
+              >
                 {isLoading ? "Scanning..." : "Capture Care Tag"}
               </button>
               <button
                 type="button"
                 onClick={handleBackToGarment}
                 disabled={isLoading}
+                style={{
+                  padding: "0.6rem 1rem",
+                  backgroundColor: "var(--color-surface)",
+                  color: "var(--color-text)",
+                  border: "1px solid rgba(245, 241, 232, 0.2)",
+                  borderRadius: "6px",
+                }}
               >
                 Back to garment photo
               </button>
@@ -229,7 +280,11 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
         </div>
       )}
 
-      {error && <p style={{ color: "red", marginTop: "0.5rem" }}>{error}</p>}
+      {error && (
+        <p style={{ color: "var(--color-caution)", marginTop: "0.5rem" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

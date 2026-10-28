@@ -1,10 +1,13 @@
 :root {
-  --color-bg: #FAF6EF;
-  --color-accent: #2C3E6B;
-  --color-text: #2A2420;
-  --color-accent-secondary: #D4A24C;
-  --color-positive: #7C9070;
-  --color-caution: #A14E3C;
+  --color-bg: #14182B;
+  --color-surface: #1E2340;
+  --color-accent: #7C8FE0;
+  --color-accent-secondary: #E0B864;
+  --color-text: #F5F1E8;
+  --color-positive: #9FB98F;
+  --color-caution: #B14A3E;
+
+  --spacing-screen-edge: 16px;
 
   --font-heading: 'DM Serif Display', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -27,9 +30,37 @@ body {
 
 button {
   font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Gallery grid - dense, edge-to-edge, responsive auto-fill */
+button:hover {
+  border-color: var(--color-accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input {
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid rgba(245, 241, 232, 0.2);
+  border-radius: 6px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Gallery grid - dense, responsive auto-fill */
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -45,10 +76,11 @@ button {
   border: none;
   padding: 0;
   margin: 0;
-  background-color: rgba(42, 36, 32, 0.06);
+  background-color: var(--color-surface);
   cursor: pointer;
   overflow: hidden;
   display: block;
+  border-radius: 2px;
 }
 
 .gallery-tile img {
@@ -61,16 +93,16 @@ button {
 
 .gallery-tile:active img {
   transform: scale(0.97);
-  filter: brightness(0.9);
+  filter: brightness(0.85);
 }
 
 @media (hover: hover) {
   .gallery-tile:hover img {
-    filter: brightness(0.95);
+    filter: brightness(0.92);
   }
 }
 
-/* Fixed Pill-shaped Scan Button */
+/* Fixed Pill-shaped Scan Button (FAB) */
 .scan-btn {
   pointer-events: auto;
   display: inline-flex;
@@ -79,13 +111,13 @@ button {
   gap: 0.5rem;
   padding: 0.85rem 2.25rem;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--font-sans);
   background-color: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-bg);
   border: none;
   border-radius: 9999px;
-  box-shadow: 0 4px 18px rgba(44, 62, 107, 0.35), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 18px rgba(124, 143, 224, 0.35), 0 2px 8px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   letter-spacing: 0.02em;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
@@ -94,12 +126,12 @@ button {
 }
 
 .scan-btn:hover {
-  background-color: #233257;
+  background-color: #92A3EC;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(44, 62, 107, 0.42), 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 22px rgba(124, 143, 224, 0.45), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .scan-btn:active {
   transform: translateY(1px) scale(0.98);
-  box-shadow: 0 2px 10px rgba(44, 62, 107, 0.3);
+  box-shadow: 0 2px 10px rgba(124, 143, 224, 0.25);
 }

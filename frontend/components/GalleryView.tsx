@@ -48,7 +48,7 @@ export function GalleryView({
               width: "60px",
               height: "60px",
               borderRadius: "50%",
-              backgroundColor: "rgba(212, 162, 76, 0.15)",
+              backgroundColor: "rgba(224, 184, 100, 0.15)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

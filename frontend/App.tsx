@@ -130,7 +130,7 @@ export function App() {
         style={{
           maxWidth: "440px",
           margin: "0 auto",
-          padding: "3rem 1.5rem",
+          padding: "3rem var(--spacing-screen-edge)",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
@@ -164,6 +164,8 @@ export function App() {
         backgroundColor: "var(--color-bg)",
         display: "flex",
         flexDirection: "column",
+        paddingLeft: "var(--spacing-screen-edge)",
+        paddingRight: "var(--spacing-screen-edge)",
       }}
     >
       <header
@@ -171,8 +173,8 @@ export function App() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "1rem 1rem 0.85rem 1rem",
-          borderBottom: "1px solid rgba(42, 36, 32, 0.08)",
+          padding: "1rem 0 0.85rem 0",
+          borderBottom: "1px solid var(--color-surface)",
           backgroundColor: "var(--color-bg)",
         }}
       >
@@ -209,9 +211,9 @@ export function App() {
               fontSize: "0.8rem",
               fontFamily: "var(--font-sans)",
               fontWeight: 500,
-              background: "transparent",
+              background: "var(--color-surface)",
               color: "var(--color-text)",
-              border: "1px solid rgba(42, 36, 32, 0.2)",
+              border: "1px solid rgba(245, 241, 232, 0.15)",
               borderRadius: "6px",
               cursor: "pointer",
             }}
@@ -222,7 +224,7 @@ export function App() {
       </header>
 
       {mode === "gallery" && (
-        <main style={{ flex: 1 }}>
+        <main style={{ flex: 1, paddingTop: "var(--spacing-screen-edge)" }}>
           <GalleryView
             scans={savedScans}
             isLoading={isScansLoading}
@@ -236,7 +238,7 @@ export function App() {
       )}
 
       {mode === "capture" && (
-        <main style={{ flex: 1, padding: "1rem" }}>
+        <main style={{ flex: 1, padding: "1rem 0" }}>
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               type="button"
@@ -262,7 +264,7 @@ export function App() {
       )}
 
       {mode === "results" && scanResult && (
-        <main style={{ flex: 1, padding: "1rem" }}>
+        <main style={{ flex: 1, padding: "1rem 0" }}>
           <div
             style={{
               display: "flex",
@@ -282,7 +284,8 @@ export function App() {
                   style={{
                     width: "200px",
                     display: "block",
-                    border: "1px solid #ccc",
+                    border: "1px solid var(--color-surface)",
+                    borderRadius: "6px",
                   }}
                 />
               </div>
@@ -298,7 +301,8 @@ export function App() {
                   style={{
                     width: "200px",
                     display: "block",
-                    border: "1px solid #ccc",
+                    border: "1px solid var(--color-surface)",
+                    borderRadius: "6px",
                   }}
                 />
               </div>
@@ -316,7 +320,7 @@ export function App() {
       )}
 
       {mode === "saved_detail" && selectedSavedScan && (
-        <main style={{ flex: 1, padding: "1rem" }}>
+        <main style={{ flex: 1, padding: "1rem 0" }}>
           <div style={{ marginBottom: "1rem" }}>
             <button
               type="button"
@@ -348,8 +352,8 @@ export function App() {
                 maxHeight: "260px",
                 objectFit: "cover",
                 display: "block",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
+                border: "1px solid var(--color-surface)",
+                borderRadius: "6px",
               }}
             />
           </div>
