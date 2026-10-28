@@ -160,7 +160,7 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
           borderRadius: "16px",
           overflow: "hidden",
           backgroundColor: "var(--color-surface)",
-          border: "1px solid rgba(245, 241, 232, 0.15)",
+          border: "1px solid rgba(212, 212, 212, 0.15)",
         }}
       >
         <video
@@ -246,7 +246,7 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
                   padding: "0.6rem 1rem",
                   backgroundColor: "var(--color-surface)",
                   color: "var(--color-text)",
-                  border: "1px solid rgba(245, 241, 232, 0.2)",
+                  border: "1px solid rgba(212, 212, 212, 0.2)",
                   borderRadius: "6px",
                 }}
               >
@@ -287,7 +287,7 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
                   padding: "0.6rem 1rem",
                   backgroundColor: "var(--color-surface)",
                   color: "var(--color-text)",
-                  border: "1px solid rgba(245, 241, 232, 0.2)",
+                  border: "1px solid rgba(212, 212, 212, 0.2)",
                   borderRadius: "6px",
                 }}
               >

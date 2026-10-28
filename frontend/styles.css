@@ -3,7 +3,7 @@
   --color-surface: #1E2340;
   --color-accent: #7C8FE0;
   --color-accent-secondary: #E0B864;
-  --color-text: #F5F1E8;
+  --color-text: #D4D4D4;
   --color-positive: #9FB98F;
   --color-caution: #B14A3E;
 
@@ -32,7 +32,7 @@ button {
   font-family: inherit;
   color: var(--color-text);
   background-color: var(--color-surface);
-  border: 1px solid rgba(245, 241, 232, 0.18);
+  border: 1px solid rgba(212, 212, 212, 0.18);
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -51,7 +51,7 @@ input {
   font-family: inherit;
   color: var(--color-text);
   background-color: var(--color-surface);
-  border: 1px solid rgba(245, 241, 232, 0.2);
+  border: 1px solid rgba(212, 212, 212, 0.2);
   border-radius: 6px;
 }
 

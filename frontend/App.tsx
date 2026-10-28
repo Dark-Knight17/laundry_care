@@ -213,7 +213,7 @@ export function App() {
               fontWeight: 500,
               background: "var(--color-surface)",
               color: "var(--color-text)",
-              border: "1px solid rgba(245, 241, 232, 0.15)",
+              border: "1px solid rgba(212, 212, 212, 0.15)",
               borderRadius: "6px",
               cursor: "pointer",
             }}

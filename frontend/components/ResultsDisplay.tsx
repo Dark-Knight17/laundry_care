@@ -159,7 +159,7 @@ export function ResultsDisplay({
             padding: "0.5rem 1rem",
             backgroundColor: "var(--color-surface)",
             color: "var(--color-text)",
-            border: "1px solid rgba(245, 241, 232, 0.2)",
+            border: "1px solid rgba(212, 212, 212, 0.2)",
             borderRadius: "6px",
           }}
         >
