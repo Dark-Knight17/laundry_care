@@ -126,54 +126,117 @@ export function App() {
 
   if (!session) {
     return (
-      <div>
-        <h1 style={{ textAlign: "center" }}>Laundry Tag Scanner</h1>
+      <div
+        style={{
+          maxWidth: "440px",
+          margin: "0 auto",
+          padding: "3rem 1.5rem",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <h1
+          style={{
+            textAlign: "center",
+            fontFamily: "var(--font-heading)",
+            fontSize: "2.1rem",
+            fontWeight: "normal",
+            color: "var(--color-accent)",
+            margin: "0 0 1.5rem 0",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Laundry Tag Scanner
+        </h1>
         <Auth />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: "480px", margin: "0 auto", padding: "1rem" }}>
-      <div
+    <div
+      style={{
+        maxWidth: "680px",
+        margin: "0 auto",
+        minHeight: "100vh",
+        backgroundColor: "var(--color-bg)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <header
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "1rem",
+          padding: "1rem 1rem 0.85rem 1rem",
+          borderBottom: "1px solid rgba(42, 36, 32, 0.08)",
+          backgroundColor: "var(--color-bg)",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: "1.4rem" }}>Laundry Tag Scanner</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <h1
+          style={{
+            margin: 0,
+            fontFamily: "var(--font-heading)",
+            fontSize: "1.55rem",
+            fontWeight: "normal",
+            color: "var(--color-accent)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Laundry Tag Scanner
+        </h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {session.user.email && (
-            <span style={{ fontSize: "0.85rem", color: "#666" }}>
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--color-text)",
+                opacity: 0.65,
+                fontFamily: "var(--font-sans)",
+              }}
+            >
               {session.user.email}
             </span>
           )}
           <button
             type="button"
             onClick={handleSignOut}
-            style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}
+            style={{
+              padding: "0.3rem 0.65rem",
+              fontSize: "0.8rem",
+              fontFamily: "var(--font-sans)",
+              fontWeight: 500,
+              background: "transparent",
+              color: "var(--color-text)",
+              border: "1px solid rgba(42, 36, 32, 0.2)",
+              borderRadius: "6px",
+              cursor: "pointer",
+            }}
           >
             Sign out
           </button>
         </div>
-      </div>
+      </header>
 
       {mode === "gallery" && (
-        <GalleryView
-          scans={savedScans}
-          isLoading={isScansLoading}
-          onSelectScan={(scan) => {
-            setSelectedSavedScan(scan);
-            setMode("saved_detail");
-          }}
-          onStartScan={handleStartCapture}
-        />
+        <main style={{ flex: 1 }}>
+          <GalleryView
+            scans={savedScans}
+            isLoading={isScansLoading}
+            onSelectScan={(scan) => {
+              setSelectedSavedScan(scan);
+              setMode("saved_detail");
+            }}
+            onStartScan={handleStartCapture}
+          />
+        </main>
       )}
 
       {mode === "capture" && (
-        <div>
+        <main style={{ flex: 1, padding: "1rem" }}>
           <div style={{ marginBottom: "0.75rem" }}>
             <button
               type="button"
@@ -184,9 +247,10 @@ export function App() {
               style={{
                 background: "none",
                 border: "none",
-                color: "#0066cc",
+                color: "var(--color-accent)",
                 padding: 0,
                 fontSize: "0.9rem",
+                fontWeight: 500,
                 cursor: "pointer",
               }}
             >
@@ -194,11 +258,11 @@ export function App() {
             </button>
           </div>
           <CaptureFlow onScanComplete={handleScanComplete} />
-        </div>
+        </main>
       )}
 
       {mode === "results" && scanResult && (
-        <div>
+        <main style={{ flex: 1, padding: "1rem" }}>
           <div
             style={{
               display: "flex",
@@ -248,11 +312,11 @@ export function App() {
             onUpdateResult={setScanResult}
             onSaveSuccess={handleSaveSuccess}
           />
-        </div>
+        </main>
       )}
 
       {mode === "saved_detail" && selectedSavedScan && (
-        <div>
+        <main style={{ flex: 1, padding: "1rem" }}>
           <div style={{ marginBottom: "1rem" }}>
             <button
               type="button"
@@ -263,9 +327,10 @@ export function App() {
               style={{
                 background: "none",
                 border: "none",
-                color: "#0066cc",
+                color: "var(--color-accent)",
                 padding: 0,
                 fontSize: "0.9rem",
+                fontWeight: 500,
                 cursor: "pointer",
                 marginBottom: "0.5rem",
               }}
@@ -301,7 +366,7 @@ export function App() {
             }}
             resetLabel="Back to gallery"
           />
-        </div>
+        </main>
       )}
     </div>
   );
