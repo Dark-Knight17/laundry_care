@@ -225,100 +225,87 @@ export function App() {
 
   return (
     <>
-      <div
-        style={{
-          maxWidth: "680px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          backgroundColor: "var(--color-bg)",
-          display: "flex",
-          flexDirection: "column",
-          paddingLeft: "var(--spacing-screen-edge)",
-          paddingRight: "var(--spacing-screen-edge)",
-          paddingTop:
-            "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
-        }}
-      >
-      {/* Fixed top bar with Google Photos layout and user avatar */}
-      <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
-        <div className="top-bar-inner">
-          <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
-          <button
-            ref={avatarButtonRef}
-            type="button"
-            onClick={() => {
-              setIsTopBarVisible(true);
-              setIsAccountCardOpen((prev) => !prev);
-            }}
-            className="account-avatar-btn"
-            aria-label={
-              userProfile.fullName
-                ? `${userProfile.fullName} - Account details`
-                : `${userProfile.email} - Account details`
-            }
-            aria-haspopup="dialog"
-            aria-expanded={isAccountCardOpen}
-            title={userProfile.fullName || userProfile.email}
-          >
-            <Avatar
-              imageUrl={userProfile.avatarUrl}
-              firstName={userProfile.firstName}
-              lastName={userProfile.lastName}
-              email={userProfile.email}
-              size={32}
-            />
-          </button>
+      {mode === "capture" ? (
+        <CaptureFlow
+          onScanComplete={handleScanComplete}
+          onClose={() => {
+            handleResetScan();
+            setMode("gallery");
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            maxWidth: "680px",
+            margin: "0 auto",
+            minHeight: "100vh",
+            backgroundColor: "var(--color-bg)",
+            display: "flex",
+            flexDirection: "column",
+            paddingLeft: "var(--spacing-screen-edge)",
+            paddingRight: "var(--spacing-screen-edge)",
+            paddingTop:
+              mode === "gallery"
+                ? "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))"
+                : "calc(env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
+          }}
+        >
+          {/* Fixed top bar with Google Photos layout and user avatar (gallery screen only) */}
+          {mode === "gallery" && (
+            <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
+              <div className="top-bar-inner">
+                <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
+                <button
+                  ref={avatarButtonRef}
+                  type="button"
+                  onClick={() => {
+                    setIsTopBarVisible(true);
+                    setIsAccountCardOpen((prev) => !prev);
+                  }}
+                  className="account-avatar-btn"
+                  aria-label={
+                    userProfile.fullName
+                      ? `${userProfile.fullName} - Account details`
+                      : `${userProfile.email} - Account details`
+                  }
+                  aria-haspopup="dialog"
+                  aria-expanded={isAccountCardOpen}
+                  title={userProfile.fullName || userProfile.email}
+                >
+                  <Avatar
+                    imageUrl={userProfile.avatarUrl}
+                    firstName={userProfile.firstName}
+                    lastName={userProfile.lastName}
+                    email={userProfile.email}
+                    size={32}
+                  />
+                </button>
 
-          {/* Account card anchored under avatar button */}
-          <AccountCard
-            profile={userProfile}
-            isOpen={isAccountCardOpen}
-            onClose={() => setIsAccountCardOpen(false)}
-            onSignOut={handleSignOut}
-            triggerRef={avatarButtonRef}
-          />
-        </div>
-      </header>
+                {/* Account card anchored under avatar button */}
+                <AccountCard
+                  profile={userProfile}
+                  isOpen={isAccountCardOpen}
+                  onClose={() => setIsAccountCardOpen(false)}
+                  onSignOut={handleSignOut}
+                  triggerRef={avatarButtonRef}
+                />
+              </div>
+            </header>
+          )}
 
-      {mode === "gallery" && (
-        <main style={{ flex: 1 }}>
-          <GalleryView
-            scans={savedScans}
-            isLoading={isScansLoading}
-            onSelectScan={(scan) => {
-              setSelectedSavedScan(scan);
-              setMode("saved_detail");
-            }}
-            onStartScan={handleStartCapture}
-          />
-        </main>
-      )}
-
-      {mode === "capture" && (
-        <main style={{ flex: 1, paddingBottom: "2rem" }}>
-          <div style={{ marginBottom: "0.75rem" }}>
-            <button
-              type="button"
-              onClick={() => {
-                handleResetScan();
-                setMode("gallery");
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--color-accent)",
-                padding: 0,
-                fontSize: "0.9rem",
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              ← Back to Gallery
-            </button>
-          </div>
-          <CaptureFlow onScanComplete={handleScanComplete} />
-        </main>
-      )}
+          {mode === "gallery" && (
+            <main style={{ flex: 1 }}>
+              <GalleryView
+                scans={savedScans}
+                isLoading={isScansLoading}
+                onSelectScan={(scan) => {
+                  setSelectedSavedScan(scan);
+                  setMode("saved_detail");
+                }}
+                onStartScan={handleStartCapture}
+              />
+            </main>
+          )}
 
       {mode === "results" && scanResult && (
         <main style={{ flex: 1, paddingBottom: "2rem" }}>
@@ -430,6 +417,7 @@ export function App() {
         </main>
       )}
     </div>
+  )}
 
     {mode === "gallery" && (
       <button

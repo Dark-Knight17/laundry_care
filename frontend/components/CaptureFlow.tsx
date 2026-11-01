@@ -13,9 +13,10 @@ interface CaptureFlowProps {
     tagBlob: Blob,
     tagImageUrl: string
   ) => void;
+  onClose: () => void;
 }
 
-export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
+export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
@@ -63,6 +64,15 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
     };
   }, []);
 
+  // Ensure all active stream tracks are stopped whenever stream changes or unmounts
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
+
   const isFrozen =
     (step === "garment" && garmentImageUrl !== null) ||
     (step === "tag" && tagImageUrl !== null);
@@ -106,16 +116,6 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
     setStep("tag");
   };
 
-  const handleBackToGarment = () => {
-    if (tagImageUrl) {
-      URL.revokeObjectURL(tagImageUrl);
-    }
-    setTagBlob(null);
-    setTagImageUrl(null);
-    setError(null);
-    setStep("garment");
-  };
-
   const handleCaptureTag = async () => {
     setError(null);
     const blob = await captureFrameBlob(videoRef.current);
@@ -152,158 +152,126 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
   };
 
   return (
-    <div>
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "480px",
-          borderRadius: "16px",
-          overflow: "hidden",
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-        }}
-      >
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{
-            width: "100%",
-            display: isFrozen ? "none" : "block",
-            borderRadius: "16px",
-            objectFit: "cover",
-          }}
+    <div className="camera-viewport">
+      {/* Edge-to-edge live camera stream */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="camera-media-stream"
+        style={{ display: isFrozen ? "none" : "block" }}
+      />
+
+      {/* Edge-to-edge frozen still frame on review / scan */}
+      {step === "garment" && garmentImageUrl && (
+        <img
+          src={garmentImageUrl}
+          alt="Captured garment"
+          className="camera-media-frozen"
         />
+      )}
 
-        {step === "garment" && garmentImageUrl && (
-          <img
-            src={garmentImageUrl}
-            alt="Captured garment"
-            style={{
-              width: "100%",
-              display: "block",
-              borderRadius: "16px",
-              objectFit: "cover",
-            }}
-          />
-        )}
+      {step === "tag" && tagImageUrl && (
+        <img
+          src={tagImageUrl}
+          alt="Captured care tag"
+          className="camera-media-frozen"
+        />
+      )}
 
-        {step === "tag" && tagImageUrl && (
-          <img
-            src={tagImageUrl}
-            alt="Captured care tag"
-            style={{
-              width: "100%",
-              display: "block",
-              borderRadius: "16px",
-              objectFit: "cover",
-            }}
-          />
-        )}
-      </div>
+      {/* Top-left circular close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="camera-close-btn"
+        aria-label="Close and return to gallery"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-icon)"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
 
-      {step === "garment" && (
-        <div style={{ marginTop: "1rem" }}>
-          <h2>Take a photo of the garment</h2>
-          <p>Photograph the whole garment first.</p>
-
-          {!garmentImageUrl ? (
-            <button
-              type="button"
-              onClick={handleCaptureGarment}
-              style={{
-                padding: "0.6rem 1.25rem",
-                backgroundColor: "var(--color-surface-raised)",
-                color: "var(--color-text)",
-                border: "1px solid var(--color-border)",
-                fontWeight: 600,
-                borderRadius: "6px",
-              }}
-            >
-              Capture Garment
-            </button>
-          ) : (
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                type="button"
-                onClick={handleProceedToTag}
-                style={{
-                  padding: "0.6rem 1.25rem",
-                  backgroundColor: "var(--color-surface-raised)",
-                  color: "var(--color-text)",
-                  border: "1px solid var(--color-border)",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                }}
-              >
-                Next: Photograph care tag
-              </button>
-              <button
-                type="button"
-                onClick={handleRetakeGarment}
-                style={{
-                  padding: "0.6rem 1rem",
-                  backgroundColor: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "6px",
-                }}
-              >
-                Retake photo
-              </button>
-            </div>
-          )}
+      {/* Camera permission / access error centered on black screen */}
+      {error && !stream && (
+        <div className="camera-error-container">
+          <p className="camera-error-text">{error}</p>
         </div>
       )}
 
-      {step === "tag" && (
-        <div style={{ marginTop: "1rem" }}>
-          <h2>Now photograph the care tag</h2>
-          <p>Frame the laundry care symbols clearly.</p>
-
-          {!tagImageUrl ? (
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                type="button"
-                onClick={handleCaptureTag}
-                disabled={isLoading}
-                style={{
-                  padding: "0.6rem 1.25rem",
-                  backgroundColor: "var(--color-surface-raised)",
-                  color: "var(--color-text)",
-                  border: "1px solid var(--color-border)",
-                  fontWeight: 600,
-                  borderRadius: "6px",
-                }}
-              >
-                {isLoading ? "Scanning..." : "Capture Care Tag"}
-              </button>
-              <button
-                type="button"
-                onClick={handleBackToGarment}
-                disabled={isLoading}
-                style={{
-                  padding: "0.6rem 1rem",
-                  backgroundColor: "var(--color-surface)",
-                  color: "var(--color-text)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "6px",
-                }}
-              >
-                Back to garment photo
-              </button>
-            </div>
-          ) : (
-            isLoading && <p>Scanning tag, please wait...</p>
-          )}
+      {/* Non-fatal error toast while camera is active */}
+      {error && stream && (
+        <div className="camera-error-toast" role="alert">
+          <p style={{ margin: 0 }}>{error}</p>
         </div>
       )}
 
-      {error && (
-        <p style={{ color: "var(--color-caution)", marginTop: "0.5rem" }}>
-          {error}
-        </p>
+      {/* Live camera capture button */}
+      {!isFrozen && (
+        <button
+          type="button"
+          onClick={step === "garment" ? handleCaptureGarment : handleCaptureTag}
+          disabled={isLoading}
+          className="camera-capture-btn"
+        >
+          {step === "garment" ? "Capture full garment" : "Capture care tag"}
+        </button>
+      )}
+
+      {/* Review state: Retake (ghost) & Next (tonal) side by side */}
+      {step === "garment" && garmentImageUrl && (
+        <div className="camera-review-row">
+          <button
+            type="button"
+            onClick={handleRetakeGarment}
+            className="camera-retake-btn"
+          >
+            Retake
+          </button>
+          <button
+            type="button"
+            onClick={handleProceedToTag}
+            className="camera-next-btn"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Tag step scanning indicator placed where buttons were */}
+      {step === "tag" && tagImageUrl && isLoading && (
+        <div className="camera-loading-pill">
+          <svg
+            className="spinner-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth="2.5"
+            aria-hidden="true"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              strokeDasharray="32"
+              strokeDashoffset="12"
+            />
+          </svg>
+          <span>Scanning care tag...</span>
+        </div>
       )}
     </div>
   );
