@@ -81,6 +81,7 @@ export function Auth() {
         email: trimmedEmail,
         password,
         options: {
+          emailRedirectTo: window.location.origin,
           data: {
             first_name: trimmedFirst,
             last_name: trimmedLast,
