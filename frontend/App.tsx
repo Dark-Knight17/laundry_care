@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { ScanResult } from "../shared/types.ts";
 import { Auth } from "./components/Auth.tsx";
+import { Avatar } from "./components/Avatar.tsx";
+import { AccountCard } from "./components/AccountCard.tsx";
 import { CaptureFlow } from "./components/CaptureFlow.tsx";
 import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
+import { getUserProfile } from "./lib/userProfile.ts";
 import { fetchSavedScans, type SavedScan } from "./services/api.ts";
 import { supabase } from "./services/supabaseClient.ts";
 
@@ -20,6 +23,9 @@ export function App() {
   const [selectedSavedScan, setSelectedSavedScan] = useState<SavedScan | null>(
     null
   );
+
+  const [isAccountCardOpen, setIsAccountCardOpen] = useState<boolean>(false);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   const [garmentBlob, setGarmentBlob] = useState<Blob | null>(null);
   const [garmentImageUrl, setGarmentImageUrl] = useState<string | null>(null);
@@ -110,11 +116,14 @@ export function App() {
   };
 
   const handleSignOut = async () => {
+    setIsAccountCardOpen(false);
     handleResetScan();
     setSelectedSavedScan(null);
     setMode("gallery");
     await supabase.auth.signOut();
   };
+
+  const userProfile = getUserProfile(session?.user);
 
   if (isAuthLoading) {
     return (
@@ -170,32 +179,41 @@ export function App() {
           "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
       }}
     >
-      {/* Fixed top bar with Google Photos layout and Notion-style neutral icons */}
+      {/* Fixed top bar with Google Photos layout and user avatar */}
       <header className="top-bar-fixed">
         <div className="top-bar-inner">
           <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
           <button
+            ref={avatarButtonRef}
             type="button"
-            onClick={handleSignOut}
-            className="account-icon-btn"
-            aria-label={`Signed in as ${session.user.email || "user"}. Tap to sign out.`}
-            title={`Signed in as ${session.user.email || "user"} (Tap to sign out)`}
+            onClick={() => setIsAccountCardOpen((prev) => !prev)}
+            className="account-avatar-btn"
+            aria-label={
+              userProfile.fullName
+                ? `${userProfile.fullName} - Account details`
+                : `${userProfile.email} - Account details`
+            }
+            aria-haspopup="dialog"
+            aria-expanded={isAccountCardOpen}
+            title={userProfile.fullName || userProfile.email}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--color-icon)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+            <Avatar
+              imageUrl={userProfile.avatarUrl}
+              firstName={userProfile.firstName}
+              lastName={userProfile.lastName}
+              email={userProfile.email}
+              size={32}
+            />
           </button>
+
+          {/* Account card anchored under avatar button */}
+          <AccountCard
+            profile={userProfile}
+            isOpen={isAccountCardOpen}
+            onClose={() => setIsAccountCardOpen(false)}
+            onSignOut={handleSignOut}
+            triggerRef={avatarButtonRef}
+          />
         </div>
       </header>
 
@@ -260,7 +278,7 @@ export function App() {
                   style={{
                     width: "200px",
                     display: "block",
-                    border: "1px solid var(--color-surface)",
+                    border: "1px solid var(--color-border)",
                     borderRadius: "6px",
                   }}
                 />
@@ -277,7 +295,7 @@ export function App() {
                   style={{
                     width: "200px",
                     display: "block",
-                    border: "1px solid var(--color-surface)",
+                    border: "1px solid var(--color-border)",
                     borderRadius: "6px",
                   }}
                 />
@@ -328,7 +346,7 @@ export function App() {
                 maxHeight: "260px",
                 objectFit: "cover",
                 display: "block",
-                border: "1px solid var(--color-surface)",
+                border: "1px solid var(--color-border)",
                 borderRadius: "6px",
               }}
             />
