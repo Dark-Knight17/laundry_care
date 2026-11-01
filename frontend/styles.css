@@ -74,6 +74,19 @@ input:focus {
   z-index: 100;
   background-color: var(--color-bg);
   padding-top: env(safe-area-inset-top, 0px);
+  transform: translateY(0);
+  transition: transform 200ms ease;
+  will-change: transform;
+}
+
+.top-bar-fixed.top-bar-hidden {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-bar-fixed {
+    transition: none;
+  }
 }
 
 .top-bar-inner {

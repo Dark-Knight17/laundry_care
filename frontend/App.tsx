@@ -25,6 +25,7 @@ export function App() {
   );
 
   const [isAccountCardOpen, setIsAccountCardOpen] = useState<boolean>(false);
+  const [isTopBarVisible, setIsTopBarVisible] = useState<boolean>(true);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   const [garmentBlob, setGarmentBlob] = useState<Blob | null>(null);
@@ -70,6 +71,62 @@ export function App() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (mode !== "gallery") {
+      setIsTopBarVisible(true);
+      return;
+    }
+
+    let lastY = Math.max(0, window.scrollY);
+    let lastScrollY = lastY;
+    let rafId: number | null = null;
+    const SCROLL_THRESHOLD = 8;
+
+    const onScroll = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        const currentY = Math.max(0, window.scrollY);
+
+        // At the top of the page (scroll position near 0), the bar is always visible
+        if (currentY <= 10) {
+          setIsTopBarVisible(true);
+          lastY = currentY;
+          lastScrollY = currentY;
+          return;
+        }
+
+        const frameDelta = currentY - lastScrollY;
+        if (frameDelta > 0 && lastY > lastScrollY) {
+          // Changed direction from scrolling up to scrolling down
+          lastY = lastScrollY;
+        } else if (frameDelta < 0 && lastY < lastScrollY) {
+          // Changed direction from scrolling down to scrolling up
+          lastY = lastScrollY;
+        }
+        lastScrollY = currentY;
+
+        const diff = currentY - lastY;
+        if (diff >= SCROLL_THRESHOLD) {
+          setIsTopBarVisible(false);
+          setIsAccountCardOpen(false);
+          lastY = currentY;
+        } else if (diff <= -SCROLL_THRESHOLD) {
+          setIsTopBarVisible(true);
+          lastY = currentY;
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [mode]);
 
   const handleScanComplete = (
     result: ScanResult,
@@ -124,6 +181,8 @@ export function App() {
   };
 
   const userProfile = getUserProfile(session?.user);
+  const isBarHidden =
+    mode === "gallery" && !isTopBarVisible && !isAccountCardOpen;
 
   if (isAuthLoading) {
     return (
@@ -180,13 +239,16 @@ export function App() {
       }}
     >
       {/* Fixed top bar with Google Photos layout and user avatar */}
-      <header className="top-bar-fixed">
+      <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
         <div className="top-bar-inner">
           <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
           <button
             ref={avatarButtonRef}
             type="button"
-            onClick={() => setIsAccountCardOpen((prev) => !prev)}
+            onClick={() => {
+              setIsTopBarVisible(true);
+              setIsAccountCardOpen((prev) => !prev);
+            }}
             className="account-avatar-btn"
             aria-label={
               userProfile.fullName
