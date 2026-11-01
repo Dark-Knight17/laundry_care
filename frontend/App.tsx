@@ -224,20 +224,21 @@ export function App() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: "680px",
-        margin: "0 auto",
-        minHeight: "100vh",
-        backgroundColor: "var(--color-bg)",
-        display: "flex",
-        flexDirection: "column",
-        paddingLeft: "var(--spacing-screen-edge)",
-        paddingRight: "var(--spacing-screen-edge)",
-        paddingTop:
-          "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
-      }}
-    >
+    <>
+      <div
+        style={{
+          maxWidth: "680px",
+          margin: "0 auto",
+          minHeight: "100vh",
+          backgroundColor: "var(--color-bg)",
+          display: "flex",
+          flexDirection: "column",
+          paddingLeft: "var(--spacing-screen-edge)",
+          paddingRight: "var(--spacing-screen-edge)",
+          paddingTop:
+            "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
+        }}
+      >
       {/* Fixed top bar with Google Photos layout and user avatar */}
       <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
         <div className="top-bar-inner">
@@ -429,5 +430,31 @@ export function App() {
         </main>
       )}
     </div>
+
+    {mode === "gallery" && (
+      <button
+        type="button"
+        onClick={handleStartCapture}
+        className="scan-btn"
+        aria-label="Scan garment tag"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+        <span>Scan</span>
+      </button>
+    )}
+  </>
   );
 }

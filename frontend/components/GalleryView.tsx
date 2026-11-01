@@ -5,7 +5,7 @@ interface GalleryViewProps {
   scans: SavedScan[];
   isLoading: boolean;
   onSelectScan: (scan: SavedScan) => void;
-  onStartScan: () => void;
+  onStartScan?: () => void;
 }
 
 export function GalleryView({
@@ -39,7 +39,7 @@ export function GalleryView({
             alignItems: "center",
             justifyContent: "center",
             textAlign: "center",
-            padding: "4.5rem 1.5rem 6rem 1.5rem",
+            padding: "4.5rem 1.5rem calc(96px + env(safe-area-inset-bottom, 0px)) 1.5rem",
             minHeight: "55vh",
           }}
         >
@@ -115,40 +115,6 @@ export function GalleryView({
           ))}
         </div>
       )}
-
-      {/* Fixed bottom-center pill Scan button with safe-area support */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 100,
-          pointerEvents: "none",
-        }}
-      >
-        <button
-          type="button"
-          onClick={onStartScan}
-          className="scan-btn"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-accent)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-          <span>Scan</span>
-        </button>
-      </div>
     </div>
   );
 }
