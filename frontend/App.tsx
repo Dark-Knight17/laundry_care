@@ -8,7 +8,8 @@ import { CaptureFlow } from "./components/CaptureFlow.tsx";
 import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
-import { fetchSavedScans, type SavedScan } from "./services/api.ts";
+import { fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
+import { scanSaveService } from "./services/scanSaveService.ts";
 import { supabase } from "./services/supabaseClient.ts";
 
 type AppMode = "gallery" | "capture" | "results" | "saved_detail";
@@ -33,6 +34,7 @@ export function App() {
   const [tagBlob, setTagBlob] = useState<Blob | null>(null);
   const [tagImageUrl, setTagImageUrl] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [activeScanSessionId, setActiveScanSessionId] = useState<string | null>(null);
 
   const loadScans = async (token?: string) => {
     setIsScansLoading(true);
@@ -70,6 +72,16 @@ export function App() {
     return () => {
       subscription.unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = scanSaveService.subscribeGlobalSaved((savedRecord) => {
+      setSavedScans((prev) => [
+        savedRecord,
+        ...prev.filter((s) => s.id !== savedRecord.id),
+      ]);
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -135,12 +147,17 @@ export function App() {
     capturedTagBlob: Blob,
     capturedTagUrl: string
   ) => {
+    const sessionId = crypto.randomUUID();
+    setActiveScanSessionId(sessionId);
     setGarmentBlob(capturedGarmentBlob);
     setGarmentImageUrl(capturedGarmentUrl);
     setTagBlob(capturedTagBlob);
     setTagImageUrl(capturedTagUrl);
     setScanResult(result);
     setMode("results");
+
+    // As soon as POST /scan succeeds, start saving in the background
+    scanSaveService.startAutoSave(sessionId, capturedGarmentBlob, result);
   };
 
   const handleResetScan = () => {
@@ -155,6 +172,7 @@ export function App() {
     setTagBlob(null);
     setTagImageUrl(null);
     setScanResult(null);
+    setActiveScanSessionId(null);
   };
 
   const handleStartCapture = () => {
@@ -307,61 +325,22 @@ export function App() {
             </main>
           )}
 
-      {mode === "results" && scanResult && (
-        <main style={{ flex: 1, paddingBottom: "2rem" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              flexWrap: "wrap",
-              marginBottom: "1rem",
-            }}
-          >
-            {garmentImageUrl && (
-              <div>
-                <p style={{ margin: "0 0 0.25rem 0", fontWeight: "bold" }}>
-                  Garment
-                </p>
-                <img
-                  src={garmentImageUrl}
-                  alt="Captured garment"
-                  style={{
-                    width: "200px",
-                    display: "block",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "6px",
-                  }}
-                />
-              </div>
-            )}
-            {tagImageUrl && (
-              <div>
-                <p style={{ margin: "0 0 0.25rem 0", fontWeight: "bold" }}>
-                  Care Tag
-                </p>
-                <img
-                  src={tagImageUrl}
-                  alt="Captured care tag"
-                  style={{
-                    width: "200px",
-                    display: "block",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "6px",
-                  }}
-                />
-              </div>
-            )}
-          </div>
-
-          <ResultsDisplay
-            result={scanResult}
-            garmentBlob={garmentBlob}
-            onReset={handleStartCapture}
-            onUpdateResult={setScanResult}
-            onSaveSuccess={handleSaveSuccess}
-          />
-        </main>
-      )}
+          {mode === "results" && scanResult && (
+            <main style={{ flex: 1, paddingBottom: "2rem" }}>
+              <ResultsDisplay
+                result={scanResult}
+                scanSessionId={activeScanSessionId || undefined}
+                onDone={() => {
+                  setMode("gallery");
+                  loadScans();
+                }}
+                onScanAnother={() => {
+                  handleStartCapture();
+                }}
+                onUpdateResult={setScanResult}
+              />
+            </main>
+          )}
 
       {mode === "saved_detail" && selectedSavedScan && (
         <main style={{ flex: 1, paddingBottom: "2rem" }}>
@@ -408,11 +387,18 @@ export function App() {
               instructions: selectedSavedScan.instructions || [],
               lowConfidenceWarning: false,
             }}
-            onReset={() => {
-              setSelectedSavedScan(null);
-              setMode("gallery");
+            onUpdateResult={async (updated) => {
+              const symbolIds = updated.detected.map((d) => d.symbolId);
+              try {
+                const refreshed = await updateScan(selectedSavedScan.id, symbolIds);
+                setSelectedSavedScan(refreshed);
+                setSavedScans((prev) =>
+                  prev.map((s) => (s.id === refreshed.id ? refreshed : s))
+                );
+              } catch (err) {
+                console.error("Failed to update saved garment:", err);
+              }
             }}
-            resetLabel="Back to gallery"
           />
         </main>
       )}

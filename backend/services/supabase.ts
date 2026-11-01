@@ -96,6 +96,64 @@ export async function createScanRecord(scanData: {
 }
 
 /**
+ * Enriches a scan record with a signed photo URL if needed.
+ */
+export async function signScanPhotoUrl(scan: any) {
+  let path = scan.garment_photo_url;
+  if (path && path.startsWith("http")) {
+    const marker = `/${GARMENT_PHOTOS_BUCKET}/`;
+    const markerHyphen = `/${GARMENT_PHOTOS_BUCKET.replace(/_/g, "-")}/`;
+    if (path.includes(marker)) {
+      path = path.substring(path.indexOf(marker) + marker.length);
+    } else if (path.includes(markerHyphen)) {
+      path = path.substring(path.indexOf(markerHyphen) + markerHyphen.length);
+    }
+  }
+
+  if (path && !path.startsWith("http")) {
+    const { data: signed } = await supabase.storage
+      .from(GARMENT_PHOTOS_BUCKET)
+      .createSignedUrl(path, 86400); // 24 hours
+
+    if (signed?.signedUrl) {
+      return {
+        ...scan,
+        garment_photo_url: signed.signedUrl,
+      };
+    }
+  }
+
+  return scan;
+}
+
+/**
+ * Updates a scan record belonging to a user, ensuring strict ownership check.
+ */
+export async function updateScanRecord(
+  scanId: string,
+  userId: string,
+  detectedSymbols: any[],
+  instructions: string[]
+) {
+  const { data, error } = await supabase
+    .from(SCANS_TABLE)
+    .update({
+      detected_symbols: detectedSymbols,
+      instructions: instructions,
+    })
+    .eq("id", scanId)
+    .eq("user_id", userId)
+    .select("id, garment_photo_url, detected_symbols, instructions, created_at")
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return await signScanPhotoUrl(data);
+}
+
+/**
  * Lists all scans belonging to a user, ordered newest first, with accessible signed photo URLs.
  */
 export async function listUserScans(userId: string) {
@@ -109,35 +167,5 @@ export async function listUserScans(userId: string) {
     throw new Error(`Failed to list scans: ${error.message}`);
   }
 
-  const enriched = await Promise.all(
-    (data || []).map(async (scan) => {
-      let path = scan.garment_photo_url;
-      if (path && path.startsWith("http")) {
-        const marker = `/${GARMENT_PHOTOS_BUCKET}/`;
-        const markerHyphen = `/${GARMENT_PHOTOS_BUCKET.replace(/_/g, "-")}/`;
-        if (path.includes(marker)) {
-          path = path.substring(path.indexOf(marker) + marker.length);
-        } else if (path.includes(markerHyphen)) {
-          path = path.substring(path.indexOf(markerHyphen) + markerHyphen.length);
-        }
-      }
-
-      if (path && !path.startsWith("http")) {
-        const { data: signed } = await supabase.storage
-          .from(GARMENT_PHOTOS_BUCKET)
-          .createSignedUrl(path, 86400); // 24 hours
-
-        if (signed?.signedUrl) {
-          return {
-            ...scan,
-            garment_photo_url: signed.signedUrl,
-          };
-        }
-      }
-
-      return scan;
-    })
-  );
-
-  return enriched;
+  return await Promise.all((data || []).map(signScanPhotoUrl));
 }

@@ -3,6 +3,7 @@ import { requireAuth } from "./middleware/auth.ts";
 import { handleDbHealth, handleHealth } from "./routes/health.ts";
 import { handleScan } from "./routes/scan.ts";
 import { handleCreateScan, handleListScans } from "./routes/scans.ts";
+import { handleUpdateScan } from "./routes/updateScan.ts";
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -49,6 +50,12 @@ const server = Bun.serve({
 
     if (req.method === "POST" && url.pathname === "/scans") {
       return requireAuth(handleCreateScan)(req);
+    }
+
+    const scansIdMatch = url.pathname.match(/^\/scans\/([^/]+)$/);
+    if (req.method === "PATCH" && scansIdMatch && scansIdMatch[1]) {
+      const scanId = scansIdMatch[1];
+      return requireAuth((req) => handleUpdateScan(req, scanId))(req);
     }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders });

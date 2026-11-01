@@ -94,6 +94,46 @@ export async function saveScan(
   return await response.json();
 }
 
+export async function updateScan(
+  scanId: string,
+  symbolIds: string[],
+  accessToken?: string
+): Promise<SavedScan> {
+  let token = accessToken;
+  if (!token) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/scans/${scanId}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ symbolIds }),
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Server error (${response.status})`;
+    try {
+      const errJson = await response.json();
+      if (errJson && typeof errJson.error === "string") {
+        errorMsg = errJson.error;
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await response.json();
+}
+
 export async function fetchSavedScans(accessToken?: string): Promise<SavedScan[]> {
   let token = accessToken;
   if (!token) {

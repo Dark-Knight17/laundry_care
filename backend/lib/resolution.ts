@@ -22,3 +22,11 @@ export function resolveScanResult(detected: DetectedSymbol[]): ScanResult {
     lowConfidenceWarning,
   };
 }
+
+export function resolveSymbolIdsToScanResult(symbolIds: string[]): ScanResult {
+  const detected: DetectedSymbol[] = symbolIds.map((id) => ({
+    symbolId: id,
+    confidence: "high",
+  }));
+  return resolveScanResult(detected);
+}

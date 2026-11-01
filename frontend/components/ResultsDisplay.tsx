@@ -1,68 +1,53 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MONOSPACE_FONT } from "../config.ts";
 import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
-import { saveScan, type SavedScan } from "../services/api.ts";
+import { scanSaveService, type ActiveSaveState } from "../services/scanSaveService.ts";
 import type { ScanResult } from "../../shared/types.ts";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
 
 interface ResultsDisplayProps {
   result: ScanResult;
-  garmentBlob?: Blob | null;
-  onReset: () => void;
-  resetLabel?: string;
+  scanSessionId?: string;
+  onDone?: () => void;
+  onScanAnother?: () => void;
   onUpdateResult?: (updated: ScanResult) => void;
-  onSaveSuccess?: (savedRecord: SavedScan) => void;
 }
 
 export function ResultsDisplay({
   result,
-  garmentBlob,
-  onReset,
-  resetLabel,
+  scanSessionId,
+  onDone,
+  onScanAnother,
   onUpdateResult,
-  onSaveSuccess,
 }: ResultsDisplayProps) {
   const [isPicking, setIsPicking] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
-    "idle"
+  const [saveState, setSaveState] = useState<ActiveSaveState | null>(() =>
+    scanSessionId ? scanSaveService.getState(scanSessionId) || null : null
   );
-  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleApplyManual = (selectedIds: string[]) => {
+  useEffect(() => {
+    if (!scanSessionId) return;
+    const unsubscribe = scanSaveService.subscribe(scanSessionId, (state) => {
+      setSaveState(state);
+    });
+    return unsubscribe;
+  }, [scanSessionId]);
+
+  const handleApplyManual = async (selectedIds: string[]) => {
     const updated = resolveSymbolsToScanResult(selectedIds);
     if (onUpdateResult) {
       onUpdateResult(updated);
     }
     setIsPicking(false);
+
+    if (scanSessionId) {
+      await scanSaveService.applyManualCorrections(scanSessionId, updated);
+    }
   };
 
-  const handleSave = async () => {
-    if (!garmentBlob) {
-      setSaveStatus("error");
-      setSaveError("Garment photo is not available to save.");
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveStatus("idle");
-    setSaveError(null);
-
-    try {
-      const saved = await saveScan(garmentBlob, result);
-      setSaveStatus("success");
-      if (onSaveSuccess) {
-        setTimeout(() => {
-          onSaveSuccess(saved);
-        }, 600);
-      }
-    } catch (err: unknown) {
-      console.error("Save scan failed:", err);
-      setSaveStatus("error");
-      const msg = err instanceof Error ? err.message : "Failed to save scan";
-      setSaveError(msg);
-    } finally {
-      setIsSaving(false);
+  const handleRetry = () => {
+    if (scanSessionId) {
+      scanSaveService.retrySave(scanSessionId);
     }
   };
 
@@ -77,8 +62,10 @@ export function ResultsDisplay({
   }
 
   return (
-    <div>
-      <h2>Care Instructions</h2>
+    <div style={{ paddingBottom: "calc(112px + env(safe-area-inset-bottom, 0px))" }}>
+      <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.75rem", margin: "0 0 1rem 0" }}>
+        Care Instructions
+      </h2>
 
       {result.lowConfidenceWarning && (
         <div
@@ -98,19 +85,21 @@ export function ResultsDisplay({
       )}
 
       {result.instructions.length > 0 ? (
-        <ul style={{ fontFamily: MONOSPACE_FONT }}>
+        <ul style={{ fontFamily: MONOSPACE_FONT, paddingLeft: "1.25rem", margin: "0 0 1.5rem 0" }}>
           {result.instructions.map((instruction, index) => (
-            <li key={index} style={{ marginBottom: "0.5rem" }}>
+            <li key={index} style={{ marginBottom: "0.75rem", lineHeight: 1.5 }}>
               {instruction}
             </li>
           ))}
         </ul>
       ) : (
-        <p style={{ fontFamily: MONOSPACE_FONT }}>No care instructions detected.</p>
+        <p style={{ fontFamily: MONOSPACE_FONT, margin: "0 0 1.5rem 0" }}>
+          No care instructions detected.
+        </p>
       )}
 
       {onUpdateResult && (
-        <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "1.25rem" }}>
           <button
             type="button"
             onClick={() => setIsPicking(true)}
@@ -120,6 +109,7 @@ export function ResultsDisplay({
               color: "var(--color-accent)",
               border: "1px solid rgba(124, 143, 224, 0.3)",
               borderRadius: "6px",
+              cursor: "pointer",
             }}
           >
             Symbol looks wrong? Pick manually
@@ -127,56 +117,48 @@ export function ResultsDisplay({
         </div>
       )}
 
-      <div
-        style={{
-          marginTop: "1.5rem",
-          display: "flex",
-          gap: "0.75rem",
-          alignItems: "center",
-        }}
-      >
-        {garmentBlob && (
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || saveStatus === "success"}
-            style={{
-              padding: "0.5rem 1.25rem",
-              fontWeight: "bold",
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "6px",
-            }}
-          >
-            {isSaving ? "Saving..." : saveStatus === "success" ? "Saved" : "Save"}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onReset}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "var(--color-surface)",
-            color: "var(--color-text)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "6px",
-          }}
-        >
-          {resetLabel || "Scan another"}
-        </button>
-      </div>
-
-      {saveStatus === "success" && (
-        <p style={{ color: "var(--color-positive)", marginTop: "0.5rem" }}>
-          Scan saved successfully! Returning to gallery...
-        </p>
+      {/* Quiet status line for background auto-save */}
+      {saveState && (
+        <div className="results-status-line">
+          {saveState.status === "saving" && <span>Saving…</span>}
+          {saveState.status === "saved" && <span>Saved to gallery</span>}
+          {saveState.status === "error" && (
+            <>
+              <span style={{ color: "var(--color-caution)" }}>Couldn't save</span>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="results-retry-btn"
+              >
+                Retry
+              </button>
+            </>
+          )}
+        </div>
       )}
 
-      {saveStatus === "error" && (
-        <p style={{ color: "var(--color-caution)", marginTop: "0.5rem" }}>
-          {saveError || "Failed to save scan."}
-        </p>
+      {/* Two fixed bottom pills: Done (ghost) & Scan another (tonal) */}
+      {(onDone || onScanAnother) && (
+        <div className="results-bottom-bar">
+          {onDone && (
+            <button
+              type="button"
+              onClick={onDone}
+              className="camera-retake-btn"
+            >
+              Done
+            </button>
+          )}
+          {onScanAnother && (
+            <button
+              type="button"
+              onClick={onScanAnother}
+              className="camera-next-btn"
+            >
+              Scan another
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
