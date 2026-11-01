@@ -137,7 +137,7 @@ export function GalleryView({
             height="18"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="currentColor"
+            stroke="var(--color-accent)"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"

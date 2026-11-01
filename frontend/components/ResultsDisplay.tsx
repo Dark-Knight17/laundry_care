@@ -143,9 +143,9 @@ export function ResultsDisplay({
             style={{
               padding: "0.5rem 1.25rem",
               fontWeight: "bold",
-              backgroundColor: "var(--color-accent)",
-              color: "var(--color-bg)",
-              border: "none",
+              backgroundColor: "var(--color-surface-raised)",
+              color: "var(--color-text)",
+              border: "1px solid var(--color-border)",
               borderRadius: "6px",
             }}
           >

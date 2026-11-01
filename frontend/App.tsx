@@ -152,7 +152,7 @@ export function App() {
             fontFamily: "var(--font-heading)",
             fontSize: "2.1rem",
             fontWeight: "normal",
-            color: "var(--color-accent)",
+            color: "var(--color-text)",
             margin: "0 0 1.5rem 0",
             letterSpacing: "-0.01em",
           }}

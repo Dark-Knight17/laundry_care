@@ -147,10 +147,10 @@ export function ManualSymbolPicker({
           onClick={handleApply}
           style={{
             padding: "0.5rem 1.25rem",
-            backgroundColor: "var(--color-accent)",
-            color: "var(--color-bg)",
+            backgroundColor: "var(--color-surface-raised)",
+            color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
             fontWeight: 600,
-            border: "none",
             borderRadius: "6px",
           }}
         >

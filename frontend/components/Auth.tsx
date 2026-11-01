@@ -370,14 +370,14 @@ export function Auth() {
           style={{
             width: "100%",
             padding: "0.65rem",
-            backgroundColor: "var(--color-accent)",
-            color: "var(--color-bg)",
+            backgroundColor: "var(--color-surface-raised)",
+            color: "var(--color-text)",
+            border: "1px solid var(--color-border)",
             fontWeight: 700,
             fontSize: "0.95rem",
-            border: "none",
             borderRadius: "6px",
             cursor: isLoading ? "not-allowed" : "pointer",
-            transition: "opacity 0.15s ease",
+            transition: "opacity 0.15s ease, border-color 0.15s ease",
           }}
         >
           {isLoading

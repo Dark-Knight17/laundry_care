@@ -214,10 +214,10 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
               onClick={handleCaptureGarment}
               style={{
                 padding: "0.6rem 1.25rem",
-                backgroundColor: "var(--color-accent)",
-                color: "var(--color-bg)",
+                backgroundColor: "var(--color-surface-raised)",
+                color: "var(--color-text)",
+                border: "1px solid var(--color-border)",
                 fontWeight: 600,
-                border: "none",
                 borderRadius: "6px",
               }}
             >
@@ -230,10 +230,10 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
                 onClick={handleProceedToTag}
                 style={{
                   padding: "0.6rem 1.25rem",
-                  backgroundColor: "var(--color-accent)",
-                  color: "var(--color-bg)",
+                  backgroundColor: "var(--color-surface-raised)",
+                  color: "var(--color-text)",
+                  border: "1px solid var(--color-border)",
                   fontWeight: 600,
-                  border: "none",
                   borderRadius: "6px",
                 }}
               >
@@ -270,10 +270,10 @@ export function CaptureFlow({ onScanComplete }: CaptureFlowProps) {
                 disabled={isLoading}
                 style={{
                   padding: "0.6rem 1.25rem",
-                  backgroundColor: "var(--color-accent)",
-                  color: "var(--color-bg)",
+                  backgroundColor: "var(--color-surface-raised)",
+                  color: "var(--color-text)",
+                  border: "1px solid var(--color-border)",
                   fontWeight: 600,
-                  border: "none",
                   borderRadius: "6px",
                 }}
               >
