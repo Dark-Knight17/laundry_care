@@ -134,6 +134,40 @@ export async function updateScan(
   return await response.json();
 }
 
+export async function deleteScan(
+  scanId: string,
+  accessToken?: string
+): Promise<void> {
+  let token = accessToken;
+  if (!token) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  }
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/scans/${scanId}`, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorMsg = `Server error (${response.status})`;
+    try {
+      const errJson = await response.json();
+      if (errJson && typeof errJson.error === "string") {
+        errorMsg = errJson.error;
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+}
+
 export async function fetchSavedScans(accessToken?: string): Promise<SavedScan[]> {
   let token = accessToken;
   if (!token) {

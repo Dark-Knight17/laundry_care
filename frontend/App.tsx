@@ -8,7 +8,7 @@ import { CaptureFlow } from "./components/CaptureFlow.tsx";
 import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
-import { fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
+import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
 import { supabase } from "./services/supabaseClient.ts";
 
@@ -24,6 +24,9 @@ export function App() {
   const [selectedSavedScan, setSelectedSavedScan] = useState<SavedScan | null>(
     null
   );
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [isAccountCardOpen, setIsAccountCardOpen] = useState<boolean>(false);
   const [isTopBarVisible, setIsTopBarVisible] = useState<boolean>(true);
@@ -190,6 +193,24 @@ export function App() {
     setMode("gallery");
   };
 
+  const handleDeleteGarment = async () => {
+    if (!selectedSavedScan) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteScan(selectedSavedScan.id);
+      setIsConfirmingDelete(false);
+      setSelectedSavedScan(null);
+      setMode("gallery");
+      await loadScans();
+    } catch (err: any) {
+      console.error("Delete scan failed:", err);
+      setDeleteError(err.message || "Failed to delete garment");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSignOut = async () => {
     setIsAccountCardOpen(false);
     handleResetScan();
@@ -318,6 +339,8 @@ export function App() {
                 isLoading={isScansLoading}
                 onSelectScan={(scan) => {
                   setSelectedSavedScan(scan);
+                  setIsConfirmingDelete(false);
+                  setDeleteError(null);
                   setMode("saved_detail");
                 }}
                 onStartScan={handleStartCapture}
@@ -343,12 +366,14 @@ export function App() {
           )}
 
       {mode === "saved_detail" && selectedSavedScan && (
-        <main style={{ flex: 1, paddingBottom: "2rem" }}>
+        <main style={{ flex: 1, paddingBottom: "3rem" }}>
           <div style={{ marginBottom: "1rem" }}>
             <button
               type="button"
               onClick={() => {
                 setSelectedSavedScan(null);
+                setIsConfirmingDelete(false);
+                setDeleteError(null);
                 setMode("gallery");
               }}
               style={{
@@ -366,7 +391,7 @@ export function App() {
             </button>
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "1.5rem" }}>
             <img
               src={selectedSavedScan.garment_photo_url}
               alt="Saved garment"
@@ -400,6 +425,71 @@ export function App() {
               }
             }}
           />
+
+          {/* Delete Action Section: Placed away from other controls */}
+          <div style={{ marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px solid var(--color-border)" }}>
+            {!isConfirmingDelete ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsConfirmingDelete(true);
+                  setDeleteError(null);
+                }}
+                className="detail-delete-btn"
+              >
+                Delete
+              </button>
+            ) : (
+              <div
+                style={{
+                  backgroundColor: "var(--color-surface)",
+                  padding: "1.25rem",
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border)",
+                  maxWidth: "340px",
+                }}
+              >
+                <p style={{ margin: "0 0 1rem 0", color: "var(--color-text)", fontSize: "0.95rem", lineHeight: 1.4 }}>
+                  Delete this garment? This can't be undone.
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsConfirmingDelete(false);
+                      setDeleteError(null);
+                    }}
+                    disabled={isDeleting}
+                    style={{
+                      padding: "0.5rem 1.25rem",
+                      borderRadius: "9999px",
+                      backgroundColor: "transparent",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text)",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteGarment}
+                    disabled={isDeleting}
+                    className="detail-delete-confirm-btn"
+                  >
+                    {isDeleting ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {deleteError && (
+              <p style={{ color: "var(--color-caution)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
+                {deleteError}
+              </p>
+            )}
+          </div>
         </main>
       )}
     </div>

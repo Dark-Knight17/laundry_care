@@ -523,3 +523,38 @@ input:focus {
   gap: 12px;
   z-index: 100;
 }
+
+/* Garment Detail Delete Action */
+.detail-delete-btn {
+  background-color: transparent;
+  border: 1px solid var(--color-caution);
+  color: var(--color-caution);
+  border-radius: 9999px;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.detail-delete-btn:hover {
+  background-color: rgba(177, 74, 62, 0.1);
+}
+
+.detail-delete-confirm-btn {
+  background-color: var(--color-caution);
+  border: 1px solid var(--color-caution);
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.detail-delete-confirm-btn:hover {
+  opacity: 0.9;
+}

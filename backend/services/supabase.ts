@@ -154,6 +154,95 @@ export async function updateScanRecord(
 }
 
 /**
+ * Retrieves a single scan record belonging to a specific user.
+ */
+export async function getScanRecord(scanId: string, userId: string) {
+  const { data, error } = await supabase
+    .from(SCANS_TABLE)
+    .select("id, garment_photo_url, user_id")
+    .eq("id", scanId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Extracts the storage file path from a garment photo URL.
+ */
+export function extractStoragePath(photoUrl: string): string {
+  if (!photoUrl) return "";
+  const parts = photoUrl.split("?");
+  const path = parts[0] ?? "";
+  if (!path) return "";
+
+  const marker = `/${GARMENT_PHOTOS_BUCKET}/`;
+  const markerHyphen = `/${GARMENT_PHOTOS_BUCKET.replace(/_/g, "-")}/`;
+  const markerUnderscore = `/${GARMENT_PHOTOS_BUCKET.replace(/-/g, "_")}/`;
+
+  if (path.includes(marker)) {
+    return path.substring(path.indexOf(marker) + marker.length);
+  }
+  if (path.includes(markerHyphen)) {
+    return path.substring(path.indexOf(markerHyphen) + markerHyphen.length);
+  }
+  if (path.includes(markerUnderscore)) {
+    return path.substring(path.indexOf(markerUnderscore) + markerUnderscore.length);
+  }
+
+  return path.startsWith("/") ? path.slice(1) : path;
+}
+
+/**
+ * Deletes a garment photo from storage, treating "object not found" as success.
+ */
+export async function deleteGarmentPhoto(photoUrl: string): Promise<void> {
+  const filePath = extractStoragePath(photoUrl);
+  if (!filePath) return;
+
+  let bucket = GARMENT_PHOTOS_BUCKET;
+  let removeRes = await supabase.storage.from(bucket).remove([filePath]);
+
+  if (removeRes.error && removeRes.error.message.includes("not found")) {
+    const alternateBucket = bucket.includes("_")
+      ? bucket.replace(/_/g, "-")
+      : bucket.replace(/-/g, "_");
+    const fallbackRes = await supabase.storage.from(alternateBucket).remove([filePath]);
+    if (!fallbackRes.error) {
+      removeRes = fallbackRes;
+    }
+  }
+
+  if (removeRes.error) {
+    const msg = removeRes.error.message.toLowerCase();
+    // Treat "object not found" or 404 as success
+    if (msg.includes("not found") || (removeRes.error as any).status === 404) {
+      return;
+    }
+    throw new Error(`Failed to delete garment photo: ${removeRes.error.message}`);
+  }
+}
+
+/**
+ * Deletes a scan record from the database.
+ */
+export async function deleteScanRecord(scanId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from(SCANS_TABLE)
+    .delete()
+    .eq("id", scanId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(`Failed to delete scan record: ${error.message}`);
+  }
+}
+
+/**
  * Lists all scans belonging to a user, ordered newest first, with accessible signed photo URLs.
  */
 export async function listUserScans(userId: string) {
