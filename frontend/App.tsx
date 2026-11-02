@@ -52,6 +52,10 @@ export function App() {
   };
 
   useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setIsAuthLoading(false);
@@ -104,8 +108,11 @@ export function App() {
         rafId = null;
         const currentY = Math.max(0, window.scrollY);
 
-        // At the top of the page (scroll position near 0), the bar is always visible
-        if (currentY <= 10) {
+        // The bar must always be visible while window.scrollY is less than or equal to the bar's own height
+        const barEl = document.querySelector(".top-bar-fixed") as HTMLElement | null;
+        const topBarThreshold = barEl && barEl.offsetHeight > 0 ? barEl.offsetHeight : 60;
+
+        if (currentY <= topBarThreshold) {
           setIsTopBarVisible(true);
           lastY = currentY;
           lastScrollY = currentY;

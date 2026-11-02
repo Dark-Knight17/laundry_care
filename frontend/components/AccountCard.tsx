@@ -19,17 +19,21 @@ export function AccountCard({
 }: AccountCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const signOutBtnRef = useRef<HTMLButtonElement>(null);
+  const prevIsOpenRef = useRef<boolean>(isOpen);
 
   // Focus management
   useEffect(() => {
+    const wasOpen = prevIsOpenRef.current;
+    prevIsOpenRef.current = isOpen;
+
     if (isOpen) {
       // Move focus into the card
       const timer = setTimeout(() => {
         cardRef.current?.focus();
       }, 50);
       return () => clearTimeout(timer);
-    } else {
-      // Move focus back to avatar trigger when closed
+    } else if (wasOpen) {
+      // Move focus back to avatar trigger when transitioning from open to closed
       triggerRef.current?.focus();
     }
   }, [isOpen, triggerRef]);
