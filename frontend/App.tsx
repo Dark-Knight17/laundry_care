@@ -7,6 +7,7 @@ import { AccountCard } from "./components/AccountCard.tsx";
 import { CaptureFlow } from "./components/CaptureFlow.tsx";
 import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
+import { IconSheet } from "./components/IconSheet.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
 import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
@@ -229,6 +230,14 @@ export function App() {
   const userProfile = getUserProfile(session?.user);
   const isBarHidden =
     mode === "gallery" && !isTopBarVisible && !isAccountCardOpen;
+
+  const isIconSheet =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("icons");
+
+  if (isIconSheet) {
+    return <IconSheet />;
+  }
 
   if (isAuthLoading) {
     return (
