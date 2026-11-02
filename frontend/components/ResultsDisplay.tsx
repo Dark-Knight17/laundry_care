@@ -2,8 +2,18 @@ import React, { useEffect, useState } from "react";
 import { MONOSPACE_FONT } from "../config.ts";
 import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
 import { scanSaveService, type ActiveSaveState } from "../services/scanSaveService.ts";
-import type { ScanResult } from "../../shared/types.ts";
+import type { ScanResult, CareSymbol } from "../../shared/types.ts";
+import { getSymbolById } from "../../shared/symbols.ts";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
+import { SymbolIcon } from "./SymbolIcon.tsx";
+
+const CATEGORY_ORDER: Record<string, number> = {
+  wash: 0,
+  bleach: 1,
+  dry: 2,
+  iron: 3,
+  professional_care: 4,
+};
 
 interface ResultsDisplayProps {
   result: ScanResult;
@@ -51,6 +61,29 @@ export function ResultsDisplay({
     }
   };
 
+  interface DetectedRow {
+    symbol: CareSymbol;
+    confidence?: "high" | "medium" | "low";
+  }
+
+  const rows: DetectedRow[] = [];
+  for (const item of (result.detected || [])) {
+    const symbolId = typeof item === "string" ? item : item?.symbolId;
+    const confidence = typeof item === "string" ? undefined : item?.confidence;
+    const symbol = getSymbolById(symbolId);
+    if (!symbol) {
+      console.warn(`ResultsDisplay: symbolId not found "${symbolId}"`);
+      continue;
+    }
+    rows.push({ symbol, confidence });
+  }
+
+  rows.sort((a, b) => {
+    const orderA = CATEGORY_ORDER[a.symbol.category] ?? 99;
+    const orderB = CATEGORY_ORDER[b.symbol.category] ?? 99;
+    return orderA - orderB;
+  });
+
   if (isPicking) {
     return (
       <ManualSymbolPicker
@@ -84,14 +117,66 @@ export function ResultsDisplay({
         </div>
       )}
 
-      {result.instructions.length > 0 ? (
-        <ul style={{ fontFamily: MONOSPACE_FONT, paddingLeft: "1.25rem", margin: "0 0 1.5rem 0" }}>
-          {result.instructions.map((instruction, index) => (
-            <li key={index} style={{ marginBottom: "0.75rem", lineHeight: 1.5 }}>
-              {instruction}
-            </li>
-          ))}
-        </ul>
+      {rows.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "0 0 1.5rem 0" }}>
+          {rows.map(({ symbol, confidence }) => {
+            const isLow = confidence === "low";
+            return (
+              <div
+                key={symbol.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                }}
+              >
+                {/* 56px square tile */}
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    minWidth: "56px",
+                    minHeight: "56px",
+                    flexShrink: 0,
+                    backgroundColor: "var(--color-surface)",
+                    border: `1px solid ${isLow ? "var(--color-caution)" : "var(--color-border)"}`,
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <SymbolIcon symbolId={symbol.id} size={40} />
+                </div>
+
+                {/* Instruction text */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <div
+                    style={{
+                      fontFamily: MONOSPACE_FONT,
+                      lineHeight: 1.5,
+                      color: "var(--color-text)",
+                    }}
+                  >
+                    {symbol.instruction}
+                  </div>
+                  {isLow && (
+                    <div
+                      style={{
+                        fontFamily: MONOSPACE_FONT,
+                        fontSize: "0.85rem",
+                        color: "var(--color-caution)",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      Check this one against your tag
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <p style={{ fontFamily: MONOSPACE_FONT, margin: "0 0 1.5rem 0" }}>
           No care instructions detected.
