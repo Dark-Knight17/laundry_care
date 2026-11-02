@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { CARE_SYMBOLS } from "../../shared/symbols.ts";
 import type { SymbolCategory } from "../../shared/types.ts";
+import { SymbolIcon } from "./SymbolIcon.tsx";
 
 interface ManualSymbolPickerProps {
   initialSelectedIds: string[];
@@ -64,31 +65,13 @@ export function ManualSymbolPicker({
         const currentSelection = selections[key];
 
         return (
-          <div key={key} style={{ marginBottom: "1rem" }}>
-            <h4>{title}</h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div key={key} style={{ marginBottom: "1.5rem" }}>
+            <h4 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem", color: "var(--color-text)" }}>
+              {title}
+            </h4>
+            <div className="picker-grid">
               <label
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                  padding: "0.35rem 0.65rem",
-                  border: `1px solid ${
-                    currentSelection === null
-                      ? "var(--color-accent)"
-                      : "var(--color-border)"
-                  }`,
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  backgroundColor:
-                    currentSelection === null
-                      ? "var(--color-surface)"
-                      : "transparent",
-                  color:
-                    currentSelection === null
-                      ? "var(--color-accent)"
-                      : "var(--color-text)",
-                }}
+                className={`picker-tile${currentSelection === null ? " picker-tile-selected" : ""}`}
               >
                 <input
                   type="radio"
@@ -96,8 +79,34 @@ export function ManualSymbolPicker({
                   value=""
                   checked={currentSelection === null}
                   onChange={() => handleSelect(key, null)}
+                  className="picker-radio-hidden"
                 />
-                None
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.75rem",
+                    fontWeight: 300,
+                    color: "var(--color-text)",
+                    opacity: 0.6,
+                  }}
+                  aria-hidden="true"
+                >
+                  —
+                </div>
+                <span
+                  style={{
+                    marginTop: "0.5rem",
+                    fontSize: "0.8rem",
+                    lineHeight: 1.3,
+                    fontWeight: currentSelection === null ? 600 : 400,
+                  }}
+                >
+                  None
+                </span>
               </label>
 
               {symbols.map((symbol) => {
@@ -105,25 +114,7 @@ export function ManualSymbolPicker({
                 return (
                   <label
                     key={symbol.id}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                      padding: "0.35rem 0.65rem",
-                      border: `1px solid ${
-                        isSelected
-                          ? "var(--color-accent)"
-                          : "var(--color-border)"
-                      }`,
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      backgroundColor: isSelected
-                        ? "var(--color-surface)"
-                        : "transparent",
-                      color: isSelected
-                        ? "var(--color-accent)"
-                        : "var(--color-text)",
-                    }}
+                    className={`picker-tile${isSelected ? " picker-tile-selected" : ""}`}
                   >
                     <input
                       type="radio"
@@ -131,8 +122,19 @@ export function ManualSymbolPicker({
                       value={symbol.id}
                       checked={isSelected}
                       onChange={() => handleSelect(key, symbol.id)}
+                      className="picker-radio-hidden"
                     />
-                    {symbol.label}
+                    <SymbolIcon symbolId={symbol.id} size={44} />
+                    <span
+                      style={{
+                        marginTop: "0.5rem",
+                        fontSize: "0.8rem",
+                        lineHeight: 1.3,
+                        fontWeight: isSelected ? 600 : 400,
+                      }}
+                    >
+                      {symbol.label}
+                    </span>
                   </label>
                 );
               })}
