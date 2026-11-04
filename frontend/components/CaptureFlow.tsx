@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ScanResult } from "../../shared/types.ts";
 import { captureFrameBlob } from "../lib/camera.ts";
+import { registerScanBackInterceptor } from "../lib/navigation.ts";
 import { scanCareTag } from "../services/api.ts";
 
 export type CaptureStep = "garment" | "tag";
@@ -28,6 +29,31 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const completedRef = useRef(false);
+  const garmentImageUrlRef = useRef<string | null>(null);
+  const tagImageUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    garmentImageUrlRef.current = garmentImageUrl;
+  }, [garmentImageUrl]);
+
+  useEffect(() => {
+    tagImageUrlRef.current = tagImageUrl;
+  }, [tagImageUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (!completedRef.current) {
+        if (garmentImageUrlRef.current) {
+          URL.revokeObjectURL(garmentImageUrlRef.current);
+        }
+        if (tagImageUrlRef.current) {
+          URL.revokeObjectURL(tagImageUrlRef.current);
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +98,27 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       }
     };
   }, [stream]);
+
+  // Intercept back press when on the tag step and move back to garment review
+  useEffect(() => {
+    registerScanBackInterceptor(() => {
+      if (step === "tag") {
+        if (tagImageUrl) {
+          URL.revokeObjectURL(tagImageUrl);
+        }
+        setTagBlob(null);
+        setTagImageUrl(null);
+        setError(null);
+        setStep("garment");
+        return true;
+      }
+      return false;
+    });
+
+    return () => {
+      registerScanBackInterceptor(null);
+    };
+  }, [step, tagImageUrl]);
 
   const isFrozen =
     (step === "garment" && garmentImageUrl !== null) ||
@@ -136,6 +183,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       const result = await scanCareTag(blob);
       console.log("ScanResult:", result);
       if (garmentBlob && garmentImageUrl) {
+        completedRef.current = true;
         onScanComplete(result, garmentBlob, garmentImageUrl, blob, url);
       }
     } catch (fetchErr: unknown) {
@@ -183,7 +231,10 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       {/* Top-left circular close button */}
       <button
         type="button"
-        onClick={onClose}
+        onClick={() => {
+          registerScanBackInterceptor(null);
+          onClose();
+        }}
         className="camera-close-btn"
         aria-label="Close and return to gallery"
       >

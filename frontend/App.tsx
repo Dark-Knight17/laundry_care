@@ -13,14 +13,21 @@ import { getUserProfile } from "./lib/userProfile.ts";
 import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
 import { supabase } from "./services/supabaseClient.ts";
-
-type AppMode = "gallery" | "capture" | "results" | "saved_detail";
+import {
+  goBack,
+  goToAuth,
+  goToDetail,
+  goToGallery,
+  goToResults,
+  goToScan,
+  initNavigation,
+  useRoute,
+} from "./lib/navigation.ts";
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
-
-  const [mode, setMode] = useState<AppMode>("gallery");
+  const route = useRoute();
   const [savedScans, setSavedScans] = useState<SavedScan[]>([]);
   const [isScansLoading, setIsScansLoading] = useState<boolean>(false);
   const [selectedSavedScan, setSelectedSavedScan] = useState<SavedScan | null>(
@@ -61,6 +68,7 @@ export function App() {
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setIsAuthLoading(false);
+      initNavigation(Boolean(existingSession));
       if (existingSession) {
         loadScans(existingSession.access_token);
       }
@@ -68,13 +76,16 @@ export function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       if (currentSession) {
         loadScans(currentSession.access_token);
+        if (event === "SIGNED_IN") {
+          goToGallery(true);
+        }
       } else {
         setSavedScans([]);
-        setMode("gallery");
+        goToAuth();
       }
     });
 
@@ -94,7 +105,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (mode !== "gallery") {
+    if (route.screen !== "gallery") {
       setIsTopBarVisible(true);
       return;
     }
@@ -150,7 +161,16 @@ export function App() {
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [mode]);
+  }, [route.screen]);
+
+  // Clean up object URLs when moving away from results and scan
+  useEffect(() => {
+    if (route.screen !== "results" && route.screen !== "scan") {
+      if (garmentImageUrl || tagImageUrl) {
+        handleResetScan();
+      }
+    }
+  }, [route.screen]);
 
   const handleScanComplete = (
     result: ScanResult,
@@ -166,7 +186,7 @@ export function App() {
     setTagBlob(capturedTagBlob);
     setTagImageUrl(capturedTagUrl);
     setScanResult(result);
-    setMode("results");
+    goToResults();
 
     // As soon as POST /scan succeeds, start saving in the background
     scanSaveService.startAutoSave(sessionId, capturedGarmentBlob, result);
@@ -190,7 +210,7 @@ export function App() {
   const handleStartCapture = () => {
     handleResetScan();
     setSelectedSavedScan(null);
-    setMode("capture");
+    goToScan();
   };
 
   const handleSaveSuccess = (savedRecord: SavedScan) => {
@@ -199,7 +219,7 @@ export function App() {
       savedRecord,
       ...prev.filter((s) => s.id !== savedRecord.id),
     ]);
-    setMode("gallery");
+    goToGallery(true);
   };
 
   const handleDeleteGarment = async () => {
@@ -210,7 +230,7 @@ export function App() {
       await deleteScan(selectedSavedScan.id);
       setIsConfirmingDelete(false);
       setSelectedSavedScan(null);
-      setMode("gallery");
+      goToGallery(true);
       await loadScans();
     } catch (err: any) {
       console.error("Delete scan failed:", err);
@@ -224,13 +244,18 @@ export function App() {
     setIsAccountCardOpen(false);
     handleResetScan();
     setSelectedSavedScan(null);
-    setMode("gallery");
     await supabase.auth.signOut();
   };
 
   const userProfile = getUserProfile(session?.user);
   const isBarHidden =
-    mode === "gallery" && !isTopBarVisible && !isAccountCardOpen;
+    route.screen === "gallery" && !isTopBarVisible && !isAccountCardOpen;
+
+  const activeDetailScan =
+    selectedSavedScan ||
+    (route.screen === "detail" && route.id
+      ? savedScans.find((s) => s.id === route.id) || null
+      : null);
 
   const isIconSheet =
     typeof window !== "undefined" &&
@@ -281,12 +306,12 @@ export function App() {
 
   return (
     <>
-      {mode === "capture" ? (
+      {route.screen === "scan" ? (
         <CaptureFlow
           onScanComplete={handleScanComplete}
           onClose={() => {
             handleResetScan();
-            setMode("gallery");
+            goBack();
           }}
         />
       ) : (
@@ -301,13 +326,13 @@ export function App() {
             paddingLeft: "var(--spacing-screen-edge)",
             paddingRight: "var(--spacing-screen-edge)",
             paddingTop:
-              mode === "gallery"
+              route.screen === "gallery"
                 ? "calc(var(--top-bar-height) + env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))"
                 : "calc(env(safe-area-inset-top, 0px) + var(--spacing-screen-edge))",
           }}
         >
           {/* Fixed top bar with Google Photos layout and user avatar (gallery screen only) */}
-          {mode === "gallery" && (
+          {route.screen === "gallery" && (
             <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
               <div className="top-bar-inner">
                 <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
@@ -349,7 +374,7 @@ export function App() {
             </header>
           )}
 
-          {mode === "gallery" && (
+          {route.screen === "gallery" && (
             <main style={{ flex: 1 }}>
               <GalleryView
                 scans={savedScans}
@@ -358,160 +383,162 @@ export function App() {
                   setSelectedSavedScan(scan);
                   setIsConfirmingDelete(false);
                   setDeleteError(null);
-                  setMode("saved_detail");
+                  goToDetail(scan.id);
                 }}
                 onStartScan={handleStartCapture}
               />
             </main>
           )}
 
-          {mode === "results" && scanResult && (
+          {route.screen === "results" && scanResult && (
             <main style={{ flex: 1, paddingBottom: "2rem" }}>
               <ResultsDisplay
                 result={scanResult}
                 scanSessionId={activeScanSessionId || undefined}
                 onDone={() => {
-                  setMode("gallery");
+                  handleResetScan();
+                  goBack();
                   loadScans();
                 }}
                 onScanAnother={() => {
-                  handleStartCapture();
+                  handleResetScan();
+                  goToScan(true);
                 }}
                 onUpdateResult={setScanResult}
               />
             </main>
           )}
 
-      {mode === "saved_detail" && selectedSavedScan && (
-        <main
-          style={{
-            flex: 1,
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
-          }}
-        >
-          <div style={{ marginBottom: "1rem" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedSavedScan(null);
-                setIsConfirmingDelete(false);
-                setDeleteError(null);
-                setMode("gallery");
-              }}
+          {route.screen === "detail" && activeDetailScan && (
+            <main
               style={{
-                background: "none",
-                border: "none",
-                color: "var(--color-accent)",
-                padding: 0,
-                fontSize: "0.9rem",
-                fontWeight: 500,
-                cursor: "pointer",
-                marginBottom: "0.5rem",
+                flex: 1,
+                paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
               }}
             >
-              ← Back to Gallery
-            </button>
-          </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSavedScan(null);
+                    setIsConfirmingDelete(false);
+                    setDeleteError(null);
+                    goBack();
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--color-accent)",
+                    padding: 0,
+                    fontSize: "0.9rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  ← Back to Gallery
+                </button>
+              </div>
 
-          <div
-            style={{
-              marginBottom: "1.5rem",
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
-            <img
-              src={selectedSavedScan.garment_photo_url}
-              alt="Saved garment"
-              style={{
-                width: "200px",
-                maxHeight: "260px",
-                objectFit: "cover",
-                display: "block",
-                marginInline: "auto",
-                border: "1px solid var(--color-border)",
-                borderRadius: "6px",
-              }}
-            />
-          </div>
+              <div
+                style={{
+                  marginBottom: "1.5rem",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <img
+                  src={activeDetailScan.garment_photo_url}
+                  alt="Saved garment"
+                  style={{
+                    width: "200px",
+                    maxHeight: "260px",
+                    objectFit: "cover",
+                    display: "block",
+                    marginInline: "auto",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "6px",
+                  }}
+                />
+              </div>
 
-          <ResultsDisplay
-            result={{
-              detected: selectedSavedScan.detected_symbols || [],
-              instructions: selectedSavedScan.instructions || [],
-              lowConfidenceWarning: false,
-            }}
-            onUpdateResult={async (updated) => {
-              const symbolIds = updated.detected.map((d) => d.symbolId);
-              try {
-                const refreshed = await updateScan(selectedSavedScan.id, symbolIds);
-                setSelectedSavedScan(refreshed);
-                setSavedScans((prev) =>
-                  prev.map((s) => (s.id === refreshed.id ? refreshed : s))
-                );
-              } catch (err) {
-                console.error("Failed to update saved garment:", err);
-              }
-            }}
-          />
+              <ResultsDisplay
+                result={{
+                  detected: activeDetailScan.detected_symbols || [],
+                  instructions: activeDetailScan.instructions || [],
+                  lowConfidenceWarning: false,
+                }}
+                onUpdateResult={async (updated) => {
+                  const symbolIds = updated.detected.map((d) => d.symbolId);
+                  try {
+                    const refreshed = await updateScan(activeDetailScan.id, symbolIds);
+                    setSelectedSavedScan(refreshed);
+                    setSavedScans((prev) =>
+                      prev.map((s) => (s.id === refreshed.id ? refreshed : s))
+                    );
+                  } catch (err) {
+                    console.error("Failed to update saved garment:", err);
+                  }
+                }}
+              />
 
-          {/* Delete Action Section */}
-          <div style={{ marginTop: "24px" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsConfirmingDelete(true);
-                setDeleteError(null);
-              }}
-              className="detail-delete-btn"
-            >
-              Delete
-            </button>
-          </div>
+              {/* Delete Action Section */}
+              <div style={{ marginTop: "24px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsConfirmingDelete(true);
+                    setDeleteError(null);
+                  }}
+                  className="detail-delete-btn"
+                >
+                  Delete
+                </button>
+              </div>
 
-          <ConfirmDialog
-            open={isConfirmingDelete}
-            message="Delete this garment? This can't be undone."
-            cancelLabel="Cancel"
-            confirmLabel={isDeleting ? "Deleting…" : "Delete"}
-            destructive
-            busy={isDeleting}
-            errorMessage={deleteError}
-            onConfirm={handleDeleteGarment}
-            onCancel={() => {
-              setIsConfirmingDelete(false);
-              setDeleteError(null);
-            }}
-          />
-        </main>
+              <ConfirmDialog
+                open={isConfirmingDelete}
+                message="Delete this garment? This can't be undone."
+                cancelLabel="Cancel"
+                confirmLabel={isDeleting ? "Deleting…" : "Delete"}
+                destructive
+                busy={isDeleting}
+                errorMessage={deleteError}
+                onConfirm={handleDeleteGarment}
+                onCancel={() => {
+                  setIsConfirmingDelete(false);
+                  setDeleteError(null);
+                }}
+              />
+            </main>
+          )}
+        </div>
       )}
-    </div>
-  )}
 
-    {mode === "gallery" && (
-      <button
-        type="button"
-        onClick={handleStartCapture}
-        className="scan-btn"
-        aria-label="Scan garment tag"
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
+      {route.screen === "gallery" && (
+        <button
+          type="button"
+          onClick={handleStartCapture}
+          className="scan-btn"
+          aria-label="Scan garment tag"
         >
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-        <span>Scan</span>
-      </button>
-    )}
-  </>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          <span>Scan</span>
+        </button>
+      )}
+    </>
   );
 }
