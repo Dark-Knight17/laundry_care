@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MONOSPACE_FONT } from "../config.ts";
 import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
+import { closeOverlay, openOverlay, useRoute } from "../lib/navigation.ts";
 import { scanSaveService, type ActiveSaveState } from "../services/scanSaveService.ts";
 import type { ScanResult, CareSymbol } from "../../shared/types.ts";
 import { getSymbolById } from "../../shared/symbols.ts";
@@ -30,7 +31,8 @@ export function ResultsDisplay({
   onScanAnother,
   onUpdateResult,
 }: ResultsDisplayProps) {
-  const [isPicking, setIsPicking] = useState<boolean>(false);
+  const route = useRoute();
+  const isPicking = route.overlay === "picker";
   const [saveState, setSaveState] = useState<ActiveSaveState | null>(() =>
     scanSessionId ? scanSaveService.getState(scanSessionId) || null : null
   );
@@ -44,11 +46,11 @@ export function ResultsDisplay({
   }, [scanSessionId]);
 
   const handleApplyManual = async (selectedIds: string[]) => {
+    closeOverlay();
     const updated = resolveSymbolsToScanResult(selectedIds);
     if (onUpdateResult) {
       onUpdateResult(updated);
     }
-    setIsPicking(false);
 
     if (scanSessionId) {
       await scanSaveService.applyManualCorrections(scanSessionId, updated);
@@ -89,7 +91,7 @@ export function ResultsDisplay({
       <ManualSymbolPicker
         initialSelectedIds={result.detected.map((d) => d.symbolId)}
         onApply={handleApplyManual}
-        onCancel={() => setIsPicking(false)}
+        onCancel={closeOverlay}
       />
     );
   }
@@ -195,7 +197,7 @@ export function ResultsDisplay({
         <div style={{ marginBottom: hasBottomBar ? "1.25rem" : 0 }}>
           <button
             type="button"
-            onClick={() => setIsPicking(true)}
+            onClick={() => openOverlay("picker")}
             style={{
               padding: "0.4rem 0.8rem",
               backgroundColor: "var(--color-surface)",

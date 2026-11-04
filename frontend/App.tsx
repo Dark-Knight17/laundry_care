@@ -14,6 +14,8 @@ import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./servi
 import { scanSaveService } from "./services/scanSaveService.ts";
 import { supabase } from "./services/supabaseClient.ts";
 import {
+  closeOverlay,
+  closeOverlayAndGoToGallery,
   goBack,
   goToAuth,
   goToDetail,
@@ -21,6 +23,7 @@ import {
   goToResults,
   goToScan,
   initNavigation,
+  openOverlay,
   useRoute,
 } from "./lib/navigation.ts";
 
@@ -33,11 +36,9 @@ export function App() {
   const [selectedSavedScan, setSelectedSavedScan] = useState<SavedScan | null>(
     null
   );
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const [isAccountCardOpen, setIsAccountCardOpen] = useState<boolean>(false);
   const [isTopBarVisible, setIsTopBarVisible] = useState<boolean>(true);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -145,7 +146,9 @@ export function App() {
         const diff = currentY - lastY;
         if (diff >= SCROLL_THRESHOLD) {
           setIsTopBarVisible(false);
-          setIsAccountCardOpen(false);
+          if (route.overlay === "account") {
+            closeOverlay();
+          }
           lastY = currentY;
         } else if (diff <= -SCROLL_THRESHOLD) {
           setIsTopBarVisible(true);
@@ -223,14 +226,14 @@ export function App() {
   };
 
   const handleDeleteGarment = async () => {
-    if (!selectedSavedScan) return;
+    const target = activeDetailScan || selectedSavedScan;
+    if (!target) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await deleteScan(selectedSavedScan.id);
-      setIsConfirmingDelete(false);
+      await deleteScan(target.id);
       setSelectedSavedScan(null);
-      goToGallery(true);
+      closeOverlayAndGoToGallery();
       await loadScans();
     } catch (err: any) {
       console.error("Delete scan failed:", err);
@@ -241,7 +244,6 @@ export function App() {
   };
 
   const handleSignOut = async () => {
-    setIsAccountCardOpen(false);
     handleResetScan();
     setSelectedSavedScan(null);
     await supabase.auth.signOut();
@@ -249,7 +251,7 @@ export function App() {
 
   const userProfile = getUserProfile(session?.user);
   const isBarHidden =
-    route.screen === "gallery" && !isTopBarVisible && !isAccountCardOpen;
+    route.screen === "gallery" && !isTopBarVisible && route.overlay !== "account";
 
   const activeDetailScan =
     selectedSavedScan ||
@@ -341,7 +343,11 @@ export function App() {
                   type="button"
                   onClick={() => {
                     setIsTopBarVisible(true);
-                    setIsAccountCardOpen((prev) => !prev);
+                    if (route.overlay === "account") {
+                      closeOverlay();
+                    } else {
+                      openOverlay("account");
+                    }
                   }}
                   className="account-avatar-btn"
                   aria-label={
@@ -350,7 +356,7 @@ export function App() {
                       : `${userProfile.email} - Account details`
                   }
                   aria-haspopup="dialog"
-                  aria-expanded={isAccountCardOpen}
+                  aria-expanded={route.overlay === "account"}
                   title={userProfile.fullName || userProfile.email}
                 >
                   <Avatar
@@ -365,8 +371,8 @@ export function App() {
                 {/* Account card anchored under avatar button */}
                 <AccountCard
                   profile={userProfile}
-                  isOpen={isAccountCardOpen}
-                  onClose={() => setIsAccountCardOpen(false)}
+                  isOpen={route.overlay === "account"}
+                  onClose={closeOverlay}
                   onSignOut={handleSignOut}
                   triggerRef={avatarButtonRef}
                 />
@@ -381,7 +387,6 @@ export function App() {
                 isLoading={isScansLoading}
                 onSelectScan={(scan) => {
                   setSelectedSavedScan(scan);
-                  setIsConfirmingDelete(false);
                   setDeleteError(null);
                   goToDetail(scan.id);
                 }}
@@ -421,7 +426,6 @@ export function App() {
                   type="button"
                   onClick={() => {
                     setSelectedSavedScan(null);
-                    setIsConfirmingDelete(false);
                     setDeleteError(null);
                     goBack();
                   }}
@@ -487,8 +491,8 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsConfirmingDelete(true);
                     setDeleteError(null);
+                    openOverlay("delete");
                   }}
                   className="detail-delete-btn"
                 >
@@ -497,7 +501,7 @@ export function App() {
               </div>
 
               <ConfirmDialog
-                open={isConfirmingDelete}
+                open={route.overlay === "delete"}
                 message="Delete this garment? This can't be undone."
                 cancelLabel="Cancel"
                 confirmLabel={isDeleting ? "Deleting…" : "Delete"}
@@ -506,8 +510,8 @@ export function App() {
                 errorMessage={deleteError}
                 onConfirm={handleDeleteGarment}
                 onCancel={() => {
-                  setIsConfirmingDelete(false);
                   setDeleteError(null);
+                  closeOverlay();
                 }}
               />
             </main>

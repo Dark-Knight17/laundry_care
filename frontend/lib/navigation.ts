@@ -86,7 +86,7 @@ export function getScanNextStepOnBack(
 
 let currentRoute: NavigationState = { app: true, screen: "gallery" };
 const listeners = new Set<(route: NavigationState) => void>();
-let initialized = false;
+let activeWindow: (Window & typeof globalThis) | null = null;
 
 type ScanBackInterceptor = () => boolean;
 let scanBackInterceptor: ScanBackInterceptor | null = null;
@@ -157,8 +157,8 @@ export function initNavigation(hasSession: boolean) {
   currentRoute = initial;
   notify();
 
-  if (!initialized) {
-    initialized = true;
+  if (activeWindow !== window) {
+    activeWindow = window;
     window.addEventListener("popstate", handlePopState);
   }
 }
@@ -219,7 +219,11 @@ export function openOverlay(overlay: Overlay) {
     id: currentRoute.id,
     overlay,
   };
-  window.history.pushState(state, "");
+  if (currentRoute.overlay) {
+    window.history.replaceState(state, "");
+  } else {
+    window.history.pushState(state, "");
+  }
   currentRoute = state;
   notify();
 }
@@ -235,6 +239,10 @@ export function closeOverlayAndGoToGallery() {
   if (typeof window === "undefined") return;
   if (currentRoute.overlay && currentRoute.screen === "detail") {
     window.history.go(-2);
+    currentRoute = { app: true, screen: "gallery" };
+    notify();
+  } else if (currentRoute.screen === "detail") {
+    window.history.back();
   } else if (currentRoute.overlay) {
     window.history.back();
   } else {
