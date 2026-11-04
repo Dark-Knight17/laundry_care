@@ -382,7 +382,12 @@ export function App() {
           )}
 
       {mode === "saved_detail" && selectedSavedScan && (
-        <main style={{ flex: 1, paddingBottom: "3rem" }}>
+        <main
+          style={{
+            flex: 1,
+            paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
           <div style={{ marginBottom: "1rem" }}>
             <button
               type="button"
@@ -407,7 +412,13 @@ export function App() {
             </button>
           </div>
 
-          <div style={{ marginBottom: "1.5rem" }}>
+          <div
+            style={{
+              marginBottom: "1.5rem",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
             <img
               src={selectedSavedScan.garment_photo_url}
               alt="Saved garment"
@@ -416,6 +427,7 @@ export function App() {
                 maxHeight: "260px",
                 objectFit: "cover",
                 display: "block",
+                marginInline: "auto",
                 border: "1px solid var(--color-border)",
                 borderRadius: "6px",
               }}
@@ -442,8 +454,8 @@ export function App() {
             }}
           />
 
-          {/* Delete Action Section: Placed away from other controls */}
-          <div style={{ marginTop: "3rem", paddingTop: "1.5rem", borderTop: "1px solid var(--color-border)" }}>
+          {/* Delete Action Section */}
+          <div style={{ marginTop: "24px" }}>
             {!isConfirmingDelete ? (
               <button
                 type="button"

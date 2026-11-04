@@ -94,8 +94,16 @@ export function ResultsDisplay({
     );
   }
 
+  const hasBottomBar = Boolean(onDone || onScanAnother);
+
   return (
-    <div style={{ paddingBottom: "calc(112px + env(safe-area-inset-bottom, 0px))" }}>
+    <div
+      style={{
+        paddingBottom: hasBottomBar
+          ? "calc(112px + env(safe-area-inset-bottom, 0px))"
+          : 0,
+      }}
+    >
       <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.75rem", margin: "0 0 1rem 0" }}>
         Care Instructions
       </h2>
@@ -184,7 +192,7 @@ export function ResultsDisplay({
       )}
 
       {onUpdateResult && (
-        <div style={{ marginBottom: "1.25rem" }}>
+        <div style={{ marginBottom: hasBottomBar ? "1.25rem" : 0 }}>
           <button
             type="button"
             onClick={() => setIsPicking(true)}
