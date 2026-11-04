@@ -8,6 +8,7 @@ import { CaptureFlow } from "./components/CaptureFlow.tsx";
 import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
 import { IconSheet } from "./components/IconSheet.tsx";
+import { ConfirmDialog } from "./components/ConfirmDialog.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
 import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
@@ -456,68 +457,32 @@ export function App() {
 
           {/* Delete Action Section */}
           <div style={{ marginTop: "24px" }}>
-            {!isConfirmingDelete ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConfirmingDelete(true);
-                  setDeleteError(null);
-                }}
-                className="detail-delete-btn"
-              >
-                Delete
-              </button>
-            ) : (
-              <div
-                style={{
-                  backgroundColor: "var(--color-surface)",
-                  padding: "1.25rem",
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border)",
-                  maxWidth: "340px",
-                }}
-              >
-                <p style={{ margin: "0 0 1rem 0", color: "var(--color-text)", fontSize: "0.95rem", lineHeight: 1.4 }}>
-                  Delete this garment? This can't be undone.
-                </p>
-                <div style={{ display: "flex", gap: "0.75rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsConfirmingDelete(false);
-                      setDeleteError(null);
-                    }}
-                    disabled={isDeleting}
-                    style={{
-                      padding: "0.5rem 1.25rem",
-                      borderRadius: "9999px",
-                      backgroundColor: "transparent",
-                      border: "1px solid var(--color-border)",
-                      color: "var(--color-text)",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteGarment}
-                    disabled={isDeleting}
-                    className="detail-delete-confirm-btn"
-                  >
-                    {isDeleting ? "Deleting…" : "Delete"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {deleteError && (
-              <p style={{ color: "var(--color-caution)", marginTop: "0.75rem", fontSize: "0.9rem" }}>
-                {deleteError}
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsConfirmingDelete(true);
+                setDeleteError(null);
+              }}
+              className="detail-delete-btn"
+            >
+              Delete
+            </button>
           </div>
+
+          <ConfirmDialog
+            open={isConfirmingDelete}
+            message="Delete this garment? This can't be undone."
+            cancelLabel="Cancel"
+            confirmLabel={isDeleting ? "Deleting…" : "Delete"}
+            destructive
+            busy={isDeleting}
+            errorMessage={deleteError}
+            onConfirm={handleDeleteGarment}
+            onCancel={() => {
+              setIsConfirmingDelete(false);
+              setDeleteError(null);
+            }}
+          />
         </main>
       )}
     </div>
