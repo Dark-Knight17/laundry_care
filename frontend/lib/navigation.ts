@@ -72,14 +72,59 @@ export function nextRouteOnBack(
   }
 }
 
-export function canInterceptScanBack(step: "garment" | "tag"): boolean {
-  return step === "tag";
+export type ScanStep =
+  | "garment_live"
+  | "garment_review"
+  | "tag_live"
+  | "tag_review"
+  | "tag_scanning";
+
+export function previousScanStep(step: ScanStep): ScanStep | null {
+  switch (step) {
+    case "tag_scanning":
+      return "tag_live";
+    case "tag_review":
+      return "tag_live";
+    case "tag_live":
+      return "garment_review";
+    case "garment_review":
+      return "garment_live";
+    case "garment_live":
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function canInterceptScanBack(
+  step: ScanStep | "garment" | "tag"
+): boolean {
+  if (step === "tag") return true;
+  if (step === "garment") return false;
+  return previousScanStep(step) !== null;
 }
 
 export function getScanNextStepOnBack(
-  step: "garment" | "tag"
-): "garment" | null {
-  return step === "tag" ? "garment" : null;
+  step: ScanStep | "garment" | "tag"
+): ScanStep | "garment" | null {
+  if (step === "tag") return "garment";
+  if (step === "garment") return null;
+  return previousScanStep(step);
+}
+
+export function getScanStep(options: {
+  step: "garment" | "tag";
+  hasGarmentImage: boolean;
+  hasTagImage: boolean;
+  isLoading: boolean;
+}): ScanStep {
+  if (options.step === "garment") {
+    return options.hasGarmentImage ? "garment_review" : "garment_live";
+  }
+  if (options.isLoading) {
+    return "tag_scanning";
+  }
+  return options.hasTagImage ? "tag_review" : "tag_live";
 }
 
 // --- State Store & History API Integration ---

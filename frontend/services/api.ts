@@ -12,7 +12,8 @@ export interface SavedScan {
 
 export async function scanCareTag(
   imageBlob: Blob,
-  accessToken?: string
+  accessToken?: string,
+  signal?: AbortSignal
 ): Promise<ScanResult> {
   const formData = new FormData();
   formData.append("image", imageBlob, "tag.jpg");
@@ -32,6 +33,7 @@ export async function scanCareTag(
     method: "POST",
     headers,
     body: formData,
+    signal,
   });
 
   if (!response.ok) {

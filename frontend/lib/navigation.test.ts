@@ -2,9 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   canInterceptScanBack,
   getScanNextStepOnBack,
+  getScanStep,
   nextRouteOnBack,
+  previousScanStep,
   sanitizeRoute,
   type NavigationState,
+  type ScanStep,
 } from "./navigation.ts";
 
 describe("navigation route rules", () => {
@@ -169,14 +172,81 @@ describe("navigation route rules", () => {
   });
 
   describe("scan back-press interception rules", () => {
-    test("tag step intercepts back press", () => {
-      expect(canInterceptScanBack("tag")).toBe(true);
-      expect(getScanNextStepOnBack("tag")).toBe("garment");
+    test("garment review back returns to garment live", () => {
+      expect(previousScanStep("garment_review")).toBe("garment_live");
+      expect(canInterceptScanBack("garment_review")).toBe(true);
+      expect(getScanNextStepOnBack("garment_review")).toBe("garment_live");
     });
 
-    test("garment step does not intercept back press (leaves to gallery)", () => {
-      expect(canInterceptScanBack("garment")).toBe(false);
-      expect(getScanNextStepOnBack("garment")).toBeNull();
+    test("tag live back returns to garment review", () => {
+      expect(previousScanStep("tag_live")).toBe("garment_review");
+      expect(canInterceptScanBack("tag_live")).toBe(true);
+      expect(getScanNextStepOnBack("tag_live")).toBe("garment_review");
+    });
+
+    test("garment live back leaves", () => {
+      expect(previousScanStep("garment_live")).toBeNull();
+      expect(canInterceptScanBack("garment_live")).toBe(false);
+      expect(getScanNextStepOnBack("garment_live")).toBeNull();
+    });
+
+    test("tag scanning back returns to tag live", () => {
+      expect(previousScanStep("tag_scanning")).toBe("tag_live");
+      expect(canInterceptScanBack("tag_scanning")).toBe(true);
+      expect(getScanNextStepOnBack("tag_scanning")).toBe("tag_live");
+    });
+
+    test("tag review back returns to tag live", () => {
+      expect(previousScanStep("tag_review")).toBe("tag_live");
+      expect(canInterceptScanBack("tag_review")).toBe(true);
+      expect(getScanNextStepOnBack("tag_review")).toBe("tag_live");
+    });
+
+    test("getScanStep correctly derives ScanStep from capture state", () => {
+      expect(
+        getScanStep({
+          step: "garment",
+          hasGarmentImage: false,
+          hasTagImage: false,
+          isLoading: false,
+        })
+      ).toBe("garment_live");
+
+      expect(
+        getScanStep({
+          step: "garment",
+          hasGarmentImage: true,
+          hasTagImage: false,
+          isLoading: false,
+        })
+      ).toBe("garment_review");
+
+      expect(
+        getScanStep({
+          step: "tag",
+          hasGarmentImage: true,
+          hasTagImage: false,
+          isLoading: false,
+        })
+      ).toBe("tag_live");
+
+      expect(
+        getScanStep({
+          step: "tag",
+          hasGarmentImage: true,
+          hasTagImage: true,
+          isLoading: false,
+        })
+      ).toBe("tag_review");
+
+      expect(
+        getScanStep({
+          step: "tag",
+          hasGarmentImage: true,
+          hasTagImage: true,
+          isLoading: true,
+        })
+      ).toBe("tag_scanning");
     });
   });
 
@@ -264,7 +334,7 @@ describe("navigation route rules", () => {
       expect(getRoute()).toEqual({ app: true, screen: "gallery" });
     });
 
-    test("scan screen back returns to gallery when on garment step", async () => {
+    test("scan screen back returns to gallery when on garment live camera", async () => {
       const { initNavigation, goToScan, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
@@ -274,27 +344,99 @@ describe("navigation route rules", () => {
       expect(getRoute()).toEqual({ app: true, screen: "gallery" });
     });
 
-    test("scan tag step back moves to garment review and keeps photo, then next back returns to gallery", async () => {
-      const { initNavigation, goToScan, registerScanBackInterceptor, getRoute } = await import("./navigation.ts");
+    test("repeated back presses from garment review reach garment live and then the gallery, never anything earlier", async () => {
+      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
 
-      let currentStep = "tag";
+      let currentStep: ScanStep = "garment_review";
       registerScanBackInterceptor(() => {
-        if (currentStep === "tag") {
-          currentStep = "garment";
+        const prev = previousScanStep(currentStep);
+        if (prev) {
+          currentStep = prev;
           return true;
         }
         return false;
       });
 
-      // User presses back while on tag step
+      // 1st back: garment_review -> garment_live
       mockHistory.back();
-      // Should intercept, move to garment step, and stay on scan screen
-      expect(currentStep).toBe("garment");
+      expect(currentStep as ScanStep).toBe("garment_live");
       expect(getRoute()).toEqual({ app: true, screen: "scan" });
 
-      // User presses back while on garment step
+      // 2nd back: garment_live -> gallery (leaves scan flow)
+      mockHistory.back();
+      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+    });
+
+    test("tag live back returns to garment review with garment photo kept", async () => {
+      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
+      initNavigation(true);
+      goToScan();
+
+      let currentStep: ScanStep = "tag_live";
+      let garmentPhotoKept = true;
+      registerScanBackInterceptor(() => {
+        const prev = previousScanStep(currentStep);
+        if (prev) {
+          currentStep = prev;
+          return true;
+        }
+        return false;
+      });
+
+      // Back from tag_live -> garment_review
+      mockHistory.back();
+      expect(currentStep as ScanStep).toBe("garment_review");
+      expect(garmentPhotoKept).toBe(true);
+      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+
+      // Next back from garment_review -> garment_live (retake, photo discarded)
+      mockHistory.back();
+      expect(currentStep as ScanStep).toBe("garment_live");
+      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+
+      // Next back leaves to gallery
+      mockHistory.back();
+      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+    });
+
+    test("scan in progress back cancels and returns to tag live", async () => {
+      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
+      initNavigation(true);
+      goToScan();
+
+      let currentStep: ScanStep = "tag_scanning";
+      let cancelled = false;
+      registerScanBackInterceptor(() => {
+        const prev = previousScanStep(currentStep);
+        if (prev) {
+          if (currentStep === "tag_scanning") {
+            cancelled = true;
+          }
+          currentStep = prev;
+          return true;
+        }
+        return false;
+      });
+
+      // 1st back: cancels scan and returns to tag_live
+      mockHistory.back();
+      expect(cancelled).toBe(true);
+      expect(currentStep as ScanStep).toBe("tag_live");
+      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+
+      // 2nd back: returns to garment_review
+      mockHistory.back();
+      expect(currentStep as ScanStep).toBe("garment_review");
+      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+
+      // 3rd back: returns to garment_live
+      mockHistory.back();
+      expect(currentStep as ScanStep).toBe("garment_live");
+      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+
+      // 4th back: leaves to gallery
       mockHistory.back();
       expect(getRoute()).toEqual({ app: true, screen: "gallery" });
     });

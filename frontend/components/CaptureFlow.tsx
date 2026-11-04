@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ScanResult } from "../../shared/types.ts";
 import { captureFrameBlob } from "../lib/camera.ts";
-import { registerScanBackInterceptor } from "../lib/navigation.ts";
+import {
+  getScanStep,
+  previousScanStep,
+  registerScanBackInterceptor,
+  type ScanStep,
+} from "../lib/navigation.ts";
 import { scanCareTag } from "../services/api.ts";
 
 export type CaptureStep = "garment" | "tag";
@@ -33,6 +38,19 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   const completedRef = useRef(false);
   const garmentImageUrlRef = useRef<string | null>(null);
   const tagImageUrlRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const currentScanStep: ScanStep = getScanStep({
+    step,
+    hasGarmentImage: garmentImageUrl !== null,
+    hasTagImage: tagImageUrl !== null,
+    isLoading,
+  });
+
+  const scanStepRef = useRef<ScanStep>(currentScanStep);
+  useEffect(() => {
+    scanStepRef.current = currentScanStep;
+  }, [currentScanStep]);
 
   useEffect(() => {
     garmentImageUrlRef.current = garmentImageUrl;
@@ -44,6 +62,10 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
 
   useEffect(() => {
     return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       if (!completedRef.current) {
         if (garmentImageUrlRef.current) {
           URL.revokeObjectURL(garmentImageUrlRef.current);
@@ -99,26 +121,74 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     };
   }, [stream]);
 
-  // Intercept back press when on the tag step and move back to garment review
+  const handleRetakeGarment = () => {
+    if (garmentImageUrlRef.current) {
+      URL.revokeObjectURL(garmentImageUrlRef.current);
+    }
+    setGarmentBlob(null);
+    setGarmentImageUrl(null);
+    setError(null);
+  };
+
+  const handleProceedToTag = () => {
+    setError(null);
+    setStep("tag");
+  };
+
+  const returnToGarmentReview = () => {
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
+    }
+    setTagBlob(null);
+    setTagImageUrl(null);
+    setError(null);
+    setStep("garment");
+  };
+
+  const returnToTagLive = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
+    }
+    setTagBlob(null);
+    setTagImageUrl(null);
+    setIsLoading(false);
+    setError(null);
+  };
+
+  // Intercept back press inside the scan flow
   useEffect(() => {
     registerScanBackInterceptor(() => {
-      if (step === "tag") {
-        if (tagImageUrl) {
-          URL.revokeObjectURL(tagImageUrl);
-        }
-        setTagBlob(null);
-        setTagImageUrl(null);
-        setError(null);
-        setStep("garment");
-        return true;
+      const activeStep = scanStepRef.current;
+      const prev = previousScanStep(activeStep);
+      if (!prev) {
+        // garment_live: do not intercept, leaves to gallery
+        return false;
       }
-      return false;
+
+      switch (activeStep) {
+        case "tag_scanning":
+        case "tag_review":
+          returnToTagLive();
+          return true;
+        case "tag_live":
+          returnToGarmentReview();
+          return true;
+        case "garment_review":
+          handleRetakeGarment();
+          return true;
+        default:
+          return false;
+      }
     });
 
     return () => {
       registerScanBackInterceptor(null);
     };
-  }, [step, tagImageUrl]);
+  }, []);
 
   const isFrozen =
     (step === "garment" && garmentImageUrl !== null) ||
@@ -149,20 +219,6 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     setGarmentImageUrl(url);
   };
 
-  const handleRetakeGarment = () => {
-    if (garmentImageUrl) {
-      URL.revokeObjectURL(garmentImageUrl);
-    }
-    setGarmentBlob(null);
-    setGarmentImageUrl(null);
-    setError(null);
-  };
-
-  const handleProceedToTag = () => {
-    setError(null);
-    setStep("tag");
-  };
-
   const handleCaptureTag = async () => {
     setError(null);
     const blob = await captureFrameBlob(videoRef.current);
@@ -179,14 +235,25 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     setTagImageUrl(url);
     setIsLoading(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const result = await scanCareTag(blob);
-      console.log("ScanResult:", result);
+      const result = await scanCareTag(blob, undefined, controller.signal);
+      if (controller.signal.aborted) {
+        return;
+      }
       if (garmentBlob && garmentImageUrl) {
         completedRef.current = true;
         onScanComplete(result, garmentBlob, garmentImageUrl, blob, url);
       }
     } catch (fetchErr: unknown) {
+      if (
+        controller.signal.aborted ||
+        (fetchErr instanceof Error && fetchErr.name === "AbortError")
+      ) {
+        return;
+      }
       console.error("Scan request failed:", fetchErr);
       const message =
         fetchErr instanceof Error ? fetchErr.message : "Failed to scan care tag";
@@ -195,7 +262,12 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       setTagBlob(null);
       setTagImageUrl(null);
     } finally {
-      setIsLoading(false);
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -232,6 +304,10 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       <button
         type="button"
         onClick={() => {
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+          }
           registerScanBackInterceptor(null);
           onClose();
         }}
