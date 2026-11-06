@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   decideScanBack,
+  exitScanToGallery,
   getRoute,
   getScanStep,
   goToDetail,
@@ -11,9 +12,12 @@ import {
   nextRouteOnBack,
   openOverlay,
   previousScanStep,
-  registerScanBackHandler,
-  registerScanBackInterceptor,
+  pushScanStep,
+  registerResultsStateListener,
+  registerScanFlowListener,
+  safePushState,
   sanitizeRoute,
+  scanAnotherFromResults,
   type NavigationState,
   type ScanStep,
 } from "./navigation.ts";
@@ -37,14 +41,17 @@ describe("navigation route rules", () => {
       expect(sanitizeRoute(null, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
       expect(sanitizeRoute(undefined, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
       expect(sanitizeRoute({ someOther: "state" }, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -52,18 +59,21 @@ describe("navigation route rules", () => {
       expect(sanitizeRoute({ app: true, screen: "scan" }, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
       expect(
         sanitizeRoute({ app: true, screen: "results" }, true)
       ).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
       expect(
         sanitizeRoute({ app: true, screen: "detail", id: "123" }, true)
       ).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
       expect(
         sanitizeRoute(
@@ -73,6 +83,7 @@ describe("navigation route rules", () => {
       ).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -80,6 +91,7 @@ describe("navigation route rules", () => {
       expect(sanitizeRoute({ app: true, screen: "gallery" }, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -87,6 +99,7 @@ describe("navigation route rules", () => {
       expect(sanitizeRoute({ app: true, screen: "auth" }, true)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
   });
@@ -101,6 +114,7 @@ describe("navigation route rules", () => {
       expect(nextRouteOnBack(state)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -109,6 +123,7 @@ describe("navigation route rules", () => {
       expect(nextRouteOnBack(state)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -117,6 +132,7 @@ describe("navigation route rules", () => {
       expect(nextRouteOnBack(state)).toEqual({
         app: true,
         screen: "gallery",
+        depth: 0,
       });
     });
 
@@ -141,6 +157,7 @@ describe("navigation route rules", () => {
         app: true,
         screen: "detail",
         id: "123",
+        depth: undefined,
       });
 
       const detailWithPicker: NavigationState = {
@@ -153,6 +170,7 @@ describe("navigation route rules", () => {
         app: true,
         screen: "detail",
         id: "123",
+        depth: undefined,
       });
 
       const resultsWithPicker: NavigationState = {
@@ -164,6 +182,7 @@ describe("navigation route rules", () => {
         app: true,
         screen: "results",
         id: undefined,
+        depth: undefined,
       });
 
       const galleryWithAccount: NavigationState = {
@@ -175,6 +194,7 @@ describe("navigation route rules", () => {
         app: true,
         screen: "gallery",
         id: undefined,
+        depth: undefined,
       });
     });
   });
@@ -253,8 +273,8 @@ describe("navigation route rules", () => {
       stack: any[];
       index: number;
       readonly state: any;
-      pushState: (data: any, unused: string) => void;
-      replaceState: (data: any, unused: string) => void;
+      pushState: (data: any, unused?: string) => void;
+      replaceState: (data: any, unused?: string) => void;
       back: () => void;
       go: (delta: number) => void;
     };
@@ -299,6 +319,12 @@ describe("navigation route rules", () => {
 
       (globalThis as any).window = {
         history: mockHistory,
+        navigator: {
+          userActivation: {
+            isActive: true,
+            hasBeenActive: true,
+          },
+        },
         addEventListener(event: string, fn: any) {
           if (!eventListeners.has(event)) {
             eventListeners.set(event, new Set());
@@ -312,143 +338,168 @@ describe("navigation route rules", () => {
     });
 
     afterEach(() => {
+      registerScanFlowListener(null);
+      registerResultsStateListener(null);
       delete (globalThis as any).window;
     });
 
     test("startup replaces entry with gallery when authenticated, auth when unauthenticated", async () => {
       const { initNavigation, getRoute } = await import("./navigation.ts");
       initNavigation(true);
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
-      expect(mockHistory.state).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
+      expect(mockHistory.state).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("detail screen back returns to gallery", async () => {
       const { initNavigation, goToDetail, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToDetail("garment-456");
-      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "garment-456" });
+      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "garment-456", depth: 1 });
 
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("scan screen back returns to gallery when on garment live camera", async () => {
       const { initNavigation, goToScan, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("repeated back presses from garment review reach garment live and then the gallery, never anything earlier", async () => {
-      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
+      const { initNavigation, goToScan, pushScanStep, registerScanFlowListener, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
 
       let currentStep: ScanStep = "garment_review";
-      registerScanBackInterceptor(() => {
-        const prev = previousScanStep(currentStep);
-        if (prev) {
-          currentStep = prev;
-          return true;
-        }
-        return false;
+      registerScanFlowListener({
+        hasGarmentImage: () => true,
+        hasTagImage: () => false,
+        onSetStep: (next) => {
+          currentStep = next;
+        },
+        onLeave: () => {
+          currentStep = "garment_live";
+        },
       });
+
+      pushScanStep("garment_review");
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_review", depth: 2 });
 
       // 1st back: garment_review -> garment_live
       mockHistory.back();
       expect(currentStep as ScanStep).toBe("garment_live");
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
       // 2nd back: garment_live -> gallery (leaves scan flow)
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("tag live back returns to garment review with garment photo kept", async () => {
-      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
+      const { initNavigation, goToScan, pushScanStep, registerScanFlowListener, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
 
       let currentStep: ScanStep = "tag_live";
       let garmentPhotoKept = true;
-      registerScanBackInterceptor(() => {
-        const prev = previousScanStep(currentStep);
-        if (prev) {
-          currentStep = prev;
-          return true;
-        }
-        return false;
+
+      registerScanFlowListener({
+        hasGarmentImage: () => garmentPhotoKept,
+        hasTagImage: () => false,
+        onSetStep: (next) => {
+          currentStep = next;
+          if (next === "garment_live") {
+            garmentPhotoKept = false;
+          }
+        },
+        onLeave: () => {
+          garmentPhotoKept = false;
+        },
       });
+
+      pushScanStep("garment_review");
+      pushScanStep("tag_live");
 
       // Back from tag_live -> garment_review
       mockHistory.back();
       expect(currentStep as ScanStep).toBe("garment_review");
       expect(garmentPhotoKept).toBe(true);
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_review", depth: 2 });
 
-      // Next back from garment_review -> garment_live (retake, photo discarded)
+      // Next back from garment_review -> garment_live (photo discarded)
       mockHistory.back();
       expect(currentStep as ScanStep).toBe("garment_live");
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(garmentPhotoKept).toBe(false);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
       // Next back leaves to gallery
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("scan in progress back cancels and returns to tag live", async () => {
-      const { initNavigation, goToScan, registerScanBackInterceptor, previousScanStep, getRoute } = await import("./navigation.ts");
+      const { initNavigation, goToScan, pushScanStep, registerScanFlowListener, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
 
       let currentStep: ScanStep = "tag_scanning";
       let cancelled = false;
-      registerScanBackInterceptor(() => {
-        const prev = previousScanStep(currentStep);
-        if (prev) {
-          if (currentStep === "tag_scanning") {
+
+      registerScanFlowListener({
+        hasGarmentImage: () => true,
+        hasTagImage: () => true,
+        onSetStep: (next) => {
+          if (currentStep === "tag_scanning" && next === "tag_live") {
             cancelled = true;
           }
-          currentStep = prev;
-          return true;
-        }
-        return false;
+          currentStep = next;
+        },
+        onLeave: () => {},
       });
+
+      pushScanStep("garment_review");
+      pushScanStep("tag_live");
+      pushScanStep("tag_scanning");
 
       // 1st back: cancels scan and returns to tag_live
       mockHistory.back();
       expect(cancelled).toBe(true);
       expect(currentStep as ScanStep).toBe("tag_live");
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "tag_live", depth: 3 });
 
       // 2nd back: returns to garment_review
       mockHistory.back();
       expect(currentStep as ScanStep).toBe("garment_review");
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_review", depth: 2 });
 
       // 3rd back: returns to garment_live
       mockHistory.back();
       expect(currentStep as ScanStep).toBe("garment_live");
-      expect(getRoute()).toEqual({ app: true, screen: "scan" });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
       // 4th back: leaves to gallery
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("results screen back goes straight to gallery", async () => {
-      const { initNavigation, goToScan, goToResults, getRoute } = await import("./navigation.ts");
+      const { initNavigation, goToScan, pushScanStep, goToResults, getRoute } = await import("./navigation.ts");
       initNavigation(true);
       goToScan();
+      pushScanStep("garment_review");
+      pushScanStep("tag_live");
+      pushScanStep("tag_scanning");
       goToResults();
-      expect(getRoute()).toEqual({ app: true, screen: "results" });
+      expect(getRoute()).toEqual({ app: true, screen: "results", depth: 4 });
 
-      // Back from results should go directly to gallery (not scan)
+      // Back from results skips the scan stack directly to gallery
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("account card, manual picker, and delete dialog close on back without leaving screen", async () => {
@@ -458,19 +509,19 @@ describe("navigation route rules", () => {
 
       // Open manual picker overlay
       openOverlay("picker");
-      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", overlay: "picker" });
+      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", overlay: "picker", depth: 1 });
 
       // Back closes overlay
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1" });
+      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", depth: 1 });
 
       // Open delete dialog overlay
       openOverlay("delete");
-      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", overlay: "delete" });
+      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", overlay: "delete", depth: 1 });
 
       // Back closes delete dialog
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1" });
+      expect(getRoute()).toEqual({ app: true, screen: "detail", id: "item-1", depth: 1 });
     });
 
     test("deleting garment pops both overlay and detail entries back to gallery", async () => {
@@ -482,8 +533,8 @@ describe("navigation route rules", () => {
       expect(mockHistory.stack.length).toBe(3); // gallery, detail, delete
       closeOverlayAndGoToGallery();
 
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
-      expect(mockHistory.state).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
+      expect(mockHistory.state).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("successful sign in replaces auth with gallery so back does not show auth", async () => {
@@ -493,7 +544,7 @@ describe("navigation route rules", () => {
       expect(mockHistory.stack.length).toBe(1);
 
       goToGallery(true); // replace auth with gallery
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
       expect(mockHistory.stack.length).toBe(1);
     });
 
@@ -512,13 +563,12 @@ describe("navigation route rules", () => {
 
     test("reload while on detail, scan, results, or overlay restores to gallery cleanly", async () => {
       const { initNavigation, getRoute } = await import("./navigation.ts");
-      // Simulate page reload where browser restored state from previous session
       mockHistory.stack = [{ app: true, screen: "detail", id: "old-123", overlay: "delete" }];
       mockHistory.index = 0;
 
       initNavigation(true);
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
-      expect(mockHistory.state).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
+      expect(mockHistory.state).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
 
     test("rapid back presses navigate smoothly and do not loop", async () => {
@@ -528,16 +578,13 @@ describe("navigation route rules", () => {
       goToResults();
       openOverlay("picker");
 
-      // Now at [gallery, results (with overlay: picker)]
-      expect(getRoute()).toEqual({ app: true, screen: "results", overlay: "picker" });
-
       // First rapid back: closes picker, stays on results
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "results" });
+      expect(getRoute()).toEqual({ app: true, screen: "results", depth: 1 });
 
       // Second rapid back: leaves results to gallery
       mockHistory.back();
-      expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
     });
   });
 
@@ -577,58 +624,136 @@ describe("navigation route rules", () => {
     });
   });
 
-  describe("fake history model - scan flow stack invariant", () => {
-    class FakeHistoryModel {
-      private entries: any[];
+  describe("Chrome History Manipulation Intervention fake history model (Requirement 5)", () => {
+    interface HistoryItem {
+      state: any;
+      title?: string;
+      url?: string | URL | null;
+      skippable: boolean;
+    }
+
+    class FakeChromeHistoryModel {
+      entries: HistoryItem[];
       index: number;
-      private listeners: Set<(e: { state: any }) => void>;
+      listeners: Set<(e: { state: any }) => void>;
+      activationSinceLastTraversal: boolean;
+      appExited: boolean;
 
       constructor() {
-        this.entries = [null];
+        this.entries = [{ state: null, skippable: false }];
         this.index = 0;
         this.listeners = new Set();
+        this.activationSinceLastTraversal = true;
+        this.appExited = false;
       }
 
       get state(): any {
-        return this.entries[this.index] ?? null;
+        if (this.appExited || this.index < 0) return null;
+        return this.entries[this.index]?.state ?? null;
       }
 
       get stack(): any[] {
-        return this.entries.slice(0, this.index + 1);
-      }
-
-      get depth(): number {
-        return this.index + 1;
+        if (this.appExited || this.index < 0) return [];
+        return this.entries.slice(0, this.index + 1).map((e) => e.state);
       }
 
       get length(): number {
+        if (this.appExited || this.index < 0) return 0;
         return this.index + 1;
       }
 
-      pushState(data: any, _unused?: string) {
+      userTap<T>(fn: () => T): T {
+        this.activationSinceLastTraversal = true;
+        return fn();
+      }
+
+      pushState(data: any, title = "", url?: string | URL | null) {
+        const hasActivation = this.activationSinceLastTraversal;
         this.entries = this.entries.slice(0, this.index + 1);
-        this.entries.push(data);
+
+        if (!hasActivation) {
+          // Chrome's History Manipulation Intervention:
+          // Calling pushState without user activation after a back/forward traversal marks
+          // same-document history entries skippable.
+          for (const entry of this.entries) {
+            entry.skippable = true;
+          }
+          this.entries.push({ state: data, title, url, skippable: true });
+        } else {
+          this.entries.push({ state: data, title, url, skippable: false });
+        }
         this.index = this.entries.length - 1;
       }
 
-      replaceState(data: any, _unused?: string) {
-        if (this.index >= 0) {
-          this.entries[this.index] = data;
+      replaceState(data: any, title = "", url?: string | URL | null) {
+        if (this.index >= 0 && this.index < this.entries.length) {
+          const current = this.entries[this.index]!;
+          this.entries[this.index] = {
+            state: data,
+            title,
+            url,
+            skippable: current.skippable,
+          };
         } else {
-          this.entries = [data];
+          this.entries = [{ state: data, title, url, skippable: false }];
           this.index = 0;
         }
       }
 
       back() {
-        this.go(-1);
+        this.uiBack();
+      }
+
+      uiBack() {
+        this.activationSinceLastTraversal = false;
+        if (this.appExited || this.index <= 0) {
+          this.appExited = true;
+          this.index = -1;
+          return;
+        }
+
+        // Chrome's rule:
+        // A back press skips skippable entries.
+        // When the top entry is skippable, the back press reaches the entry
+        // beneath the whole skippable run (or exits the app if nothing below).
+        let target = this.index;
+        if (this.entries[target]?.skippable) {
+          while (target >= 0 && this.entries[target]?.skippable) {
+            target--;
+          }
+        } else {
+          target = target - 1;
+          while (target >= 0 && this.entries[target]?.skippable) {
+            target--;
+          }
+        }
+
+        if (target < 0) {
+          this.appExited = true;
+          this.index = -1;
+          return;
+        }
+
+        this.index = target;
+        const entry = this.entries[this.index];
+        const event = { state: entry ? entry.state : null };
+        for (const listener of Array.from(this.listeners)) {
+          listener(event);
+        }
       }
 
       go(delta: number) {
+        this.activationSinceLastTraversal = false;
         const target = this.index + delta;
-        if (target >= 0 && target < this.entries.length) {
+        if (target < 0) {
+          this.appExited = true;
+          this.index = -1;
+          return;
+        }
+        if (target < this.entries.length) {
           this.index = target;
-          const event = { state: this.entries[this.index] };
+          const entry = this.entries[this.index];
+          const event = { state: entry ? entry.state : null };
           for (const listener of Array.from(this.listeners)) {
             listener(event);
           }
@@ -644,12 +769,20 @@ describe("navigation route rules", () => {
       }
     }
 
-    let fakeHistory: FakeHistoryModel;
+    let fakeHistory: FakeChromeHistoryModel;
 
     beforeEach(() => {
-      fakeHistory = new FakeHistoryModel();
+      fakeHistory = new FakeChromeHistoryModel();
       (globalThis as any).window = {
         history: fakeHistory,
+        navigator: {
+          get userActivation() {
+            return {
+              isActive: fakeHistory.activationSinceLastTraversal,
+              hasBeenActive: true,
+            };
+          },
+        },
         addEventListener(type: string, fn: any) {
           if (type === "popstate") {
             fakeHistory.addListener(fn);
@@ -664,31 +797,41 @@ describe("navigation route rules", () => {
     });
 
     afterEach(() => {
-      registerScanBackHandler(null);
+      registerScanFlowListener(null);
+      registerResultsStateListener(null);
       delete (globalThis as any).window;
     });
 
-    function setupScanFlow() {
+    function setupFlow() {
       let step: ScanStep = "garment_live";
+      let hasGarment = false;
+      let hasTag = false;
       let streamStopped = false;
       let photosDiscarded = false;
-      let garmentPhotoKept = false;
 
-      registerScanBackHandler({
-        getStep: () => step,
-        onStay: (nextStep: ScanStep) => {
-          step = nextStep;
-          if (nextStep === "garment_live") {
+      registerScanFlowListener({
+        hasGarmentImage: () => hasGarment,
+        hasTagImage: () => hasTag,
+        onSetStep: (next) => {
+          step = next;
+          if (next === "garment_live") {
+            hasGarment = false;
+            hasTag = false;
             photosDiscarded = true;
-            garmentPhotoKept = false;
-          } else if (nextStep === "garment_review") {
-            garmentPhotoKept = true;
+          } else if (next === "garment_review") {
+            hasTag = false;
           }
         },
         onLeave: () => {
           streamStopped = true;
           photosDiscarded = true;
-          garmentPhotoKept = false;
+          hasGarment = false;
+          hasTag = false;
+        },
+        onResetToGarmentLive: () => {
+          step = "garment_live";
+          hasGarment = false;
+          hasTag = false;
         },
       });
 
@@ -702,166 +845,186 @@ describe("navigation route rules", () => {
         get photosDiscarded() {
           return photosDiscarded;
         },
-        get garmentPhotoKept() {
-          return garmentPhotoKept;
-        },
-        takeGarmentPhoto() {
-          step = "garment_review";
-          garmentPhotoKept = true;
-          photosDiscarded = false;
+        captureGarment() {
+          fakeHistory.userTap(() => {
+            pushScanStep("garment_review");
+            step = "garment_review";
+            hasGarment = true;
+          });
         },
         clickNext() {
-          if (step === "garment_review") {
+          fakeHistory.userTap(() => {
+            pushScanStep("tag_live");
             step = "tag_live";
-          }
+          });
         },
-        clickRetake() {
-          if (step === "garment_review") {
-            step = "garment_live";
-            photosDiscarded = true;
-            garmentPhotoKept = false;
-          } else if (step === "tag_review") {
-            step = "tag_live";
-          }
+        captureTag() {
+          fakeHistory.userTap(() => {
+            pushScanStep("tag_scanning");
+            step = "tag_scanning";
+            hasTag = true;
+          });
+        },
+        scanComplete() {
+          goToResults();
         },
       };
     }
 
-    test("gallery -> scan -> back: lands on gallery, stack depth is 1 ([gallery])", () => {
+    test("(a) gallery -> Scan -> Back -> leaves to gallery", () => {
       initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
+      const flow = setupFlow();
 
+      fakeHistory.userTap(() => goToScan());
       expect(flow.step).toBe("garment_live");
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
       expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
 
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(getRoute().screen).toBe("gallery");
       expect(fakeHistory.length).toBe(1);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
     });
 
-    test("gallery -> scan -> garment photo -> back: lands on garment live camera, stack depth is 2 ([gallery, scan])", () => {
+    test("(b) gallery -> Scan -> Capture garment -> Back -> Back -> leaves to gallery (the bug sequence; must pass)", () => {
       initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
+      const flow = setupFlow();
 
-      flow.takeGarmentPhoto();
+      fakeHistory.userTap(() => goToScan());
+      flow.captureGarment();
       expect(flow.step).toBe("garment_review");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_review", depth: 2 });
+      expect(fakeHistory.length).toBe(3);
 
+      // 1st Back: garment_review -> garment_live
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(flow.step).toBe("garment_live");
-      expect(getRoute().screen).toBe("scan");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
-    });
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
-    test("same as previous, then back again: lands on gallery, stack depth is 1 ([gallery]), stream stopped, photos discarded", () => {
-      initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
-
-      flow.takeGarmentPhoto();
+      // 2nd Back: garment_live -> gallery (leaves scan flow; must NOT exit the app)
       fakeHistory.back();
-      expect(flow.step).toBe("garment_live");
-      expect(fakeHistory.length).toBe(2);
-
-      fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(getRoute().screen).toBe("gallery");
       expect(fakeHistory.length).toBe(1);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
-      expect(flow.streamStopped).toBe(true);
-      expect(flow.photosDiscarded).toBe(true);
     });
 
-    test("gallery -> scan -> garment photo -> Next -> back: lands on garment review with photo kept, stack depth is 2 ([gallery, scan]); back again: live garment camera, depth 2; back again: gallery, depth 1", () => {
+    test("(c) gallery -> Scan -> Capture garment -> Retake button -> Back -> leaves to gallery", () => {
       initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
+      const flow = setupFlow();
 
-      flow.takeGarmentPhoto();
+      fakeHistory.userTap(() => goToScan());
+      flow.captureGarment();
+      expect(flow.step).toBe("garment_review");
+
+      // On-screen Retake button calls history.back()
+      fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
+      expect(flow.step).toBe("garment_live");
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
+
+      // Back from garment_live -> leaves to gallery
+      fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+    });
+
+    test("(d) gallery -> Scan -> Capture garment -> Next -> Back -> Back -> Back -> leaves to gallery", () => {
+      initNavigation(true);
+      const flow = setupFlow();
+
+      fakeHistory.userTap(() => goToScan());
+      flow.captureGarment();
       flow.clickNext();
       expect(flow.step).toBe("tag_live");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "tag_live", depth: 3 });
 
-      // 1st back: lands on garment review with photo kept, depth 2
+      // 1st Back: tag_live -> garment_review
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(flow.step).toBe("garment_review");
-      expect(flow.garmentPhotoKept).toBe(true);
-      expect(getRoute().screen).toBe("scan");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_review", depth: 2 });
 
-      // 2nd back: live garment camera, depth 2
+      // 2nd Back: garment_review -> garment_live
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(flow.step).toBe("garment_live");
-      expect(getRoute().screen).toBe("scan");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
-      // 3rd back: gallery, depth 1
+      // 3rd Back: garment_live -> gallery
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(getRoute().screen).toBe("gallery");
       expect(fakeHistory.length).toBe(1);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
     });
 
-    test("pressing Retake and Next multiple times in a row never changes the stack depth (always [gallery, scan])", () => {
+    test("(e) gallery -> Scan -> Capture garment -> Next -> Capture tag -> scan completes (results) -> Back -> leaves to gallery", () => {
       initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
+      const flow = setupFlow();
 
-      for (let i = 0; i < 4; i++) {
-        flow.takeGarmentPhoto();
-        expect(fakeHistory.length).toBe(2);
-        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      fakeHistory.userTap(() => goToScan());
+      flow.captureGarment();
+      flow.clickNext();
+      flow.captureTag();
+      flow.scanComplete();
+      expect(getRoute()).toEqual({ app: true, screen: "results", depth: 4 });
 
-        flow.clickNext();
-        expect(fakeHistory.length).toBe(2);
-        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
-
-        fakeHistory.back();
-        expect(fakeHistory.length).toBe(2);
-        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
-
-        flow.clickRetake();
-        expect(flow.step).toBe("garment_live");
-        expect(fakeHistory.length).toBe(2);
-        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
-      }
+      // Back from results should skip the remaining scan stack and return directly to gallery
+      fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
     });
 
-    test("3 rapid back presses from garment review end on gallery, never drop below [gallery], and never loop", () => {
+    test("(f) gallery -> Scan -> Capture garment -> Next -> Capture tag -> scan completes (results) -> Scan another -> Back -> leaves to gallery", () => {
       initNavigation(true);
-      goToScan();
-      const flow = setupScanFlow();
+      const flow = setupFlow();
 
-      flow.takeGarmentPhoto();
-      expect(flow.step).toBe("garment_review");
-      expect(fakeHistory.length).toBe(2);
+      fakeHistory.userTap(() => goToScan());
+      flow.captureGarment();
+      flow.clickNext();
+      flow.captureTag();
+      flow.scanComplete();
 
-      // Rapid back 1: garment_review -> garment_live
-      fakeHistory.back();
+      // Tap "Scan another": lands on garment_live at depth 1 without pushing
+      fakeHistory.userTap(() => scanAnotherFromResults());
       expect(flow.step).toBe("garment_live");
-      expect(getRoute().screen).toBe("scan");
-      expect(fakeHistory.length).toBe(2);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      expect(getRoute()).toEqual({ app: true, screen: "scan", step: "garment_live", depth: 1 });
 
-      // Rapid back 2: garment_live -> gallery
+      // Back from garment_live -> gallery
       fakeHistory.back();
+      expect(fakeHistory.appExited).toBe(false);
       expect(getRoute().screen).toBe("gallery");
       expect(fakeHistory.length).toBe(1);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+    });
 
-      // Rapid back 3: at gallery, never drops below [gallery] and never loops
+    test("(g) a test showing that if the old popstate-push behavior is used, sequence (b) fails and leaves the app on the 2nd Back press", () => {
+      initNavigation(true);
+
+      // Old scan flow: only gallery and scan entry pushed
+      fakeHistory.userTap(() => fakeHistory.pushState({ app: true, screen: "scan" }, ""));
+      // Garment photo was React-only state, no pushState.
+      // Now 1st back:
+      // In the old code, handlePopState intercepted the popstate event and called
+      // history.pushState({ app: true, screen: "scan" }, "") without user activation!
+      const oldPopStateInterceptor = () => {
+        // Guard re-push inside popstate without user activation:
+        fakeHistory.pushState({ app: true, screen: "scan" }, "");
+      };
+      fakeHistory.addListener(oldPopStateInterceptor);
+
+      // 1st back arrives:
       fakeHistory.back();
-      expect(getRoute().screen).toBe("gallery");
-      expect(fakeHistory.length).toBe(1);
-      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+      fakeHistory.removeListener(oldPopStateInterceptor);
+
+      // Under Chrome's History Manipulation Intervention, pushState without activation
+      // marked the page's entries skippable.
+      // Now user presses 2nd Back:
+      fakeHistory.back();
+
+      // The skippable entries are bypassed and the browser leaves the app!
+      expect(fakeHistory.appExited).toBe(true);
     });
   });
 });

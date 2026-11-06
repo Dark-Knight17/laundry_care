@@ -2,9 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import type { ScanResult } from "../../shared/types.ts";
 import { captureFrameBlob } from "../lib/camera.ts";
 import {
-  getScanStep,
-  previousScanStep,
-  registerScanBackHandler,
+  pushScanStep,
+  registerScanFlowListener,
   type ScanStep,
 } from "../lib/navigation.ts";
 import { scanCareTag } from "../services/api.ts";
@@ -36,27 +35,11 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   const [error, setError] = useState<string | null>(null);
 
   const completedRef = useRef(false);
+  const garmentBlobRef = useRef<Blob | null>(null);
   const garmentImageUrlRef = useRef<string | null>(null);
+  const tagBlobRef = useRef<Blob | null>(null);
   const tagImageUrlRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const currentScanStep: ScanStep = getScanStep({
-    step,
-    hasGarmentImage: garmentImageUrl !== null,
-    hasTagImage: tagImageUrl !== null,
-    isLoading,
-  });
-
-  const scanStepRef = useRef<ScanStep>(currentScanStep);
-  scanStepRef.current = currentScanStep;
-
-  useEffect(() => {
-    garmentImageUrlRef.current = garmentImageUrl;
-  }, [garmentImageUrl]);
-
-  useEffect(() => {
-    tagImageUrlRef.current = tagImageUrl;
-  }, [tagImageUrl]);
 
   useEffect(() => {
     return () => {
@@ -119,37 +102,31 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     };
   }, [stream]);
 
-  const handleRetakeGarment = () => {
-    scanStepRef.current = "garment_live";
+  const transitionToGarmentLive = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     if (garmentImageUrlRef.current) {
       URL.revokeObjectURL(garmentImageUrlRef.current);
       garmentImageUrlRef.current = null;
     }
-    setGarmentBlob(null);
-    setGarmentImageUrl(null);
-    setError(null);
-  };
-
-  const handleProceedToTag = () => {
-    scanStepRef.current = "tag_live";
-    setError(null);
-    setStep("tag");
-  };
-
-  const returnToGarmentReview = () => {
-    scanStepRef.current = "garment_review";
     if (tagImageUrlRef.current) {
       URL.revokeObjectURL(tagImageUrlRef.current);
       tagImageUrlRef.current = null;
     }
+    garmentBlobRef.current = null;
+    tagBlobRef.current = null;
+    setGarmentBlob(null);
+    setGarmentImageUrl(null);
     setTagBlob(null);
     setTagImageUrl(null);
+    setIsLoading(false);
     setError(null);
     setStep("garment");
   };
 
-  const returnToTagLive = () => {
-    scanStepRef.current = "tag_live";
+  const transitionToGarmentReview = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -158,52 +135,77 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       URL.revokeObjectURL(tagImageUrlRef.current);
       tagImageUrlRef.current = null;
     }
+    tagBlobRef.current = null;
     setTagBlob(null);
     setTagImageUrl(null);
     setIsLoading(false);
     setError(null);
+    setStep("garment");
   };
 
-  // Register back handling inside scan flow
+  const transitionToTagLive = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
+      tagImageUrlRef.current = null;
+    }
+    tagBlobRef.current = null;
+    setTagBlob(null);
+    setTagImageUrl(null);
+    setIsLoading(false);
+    setError(null);
+    setStep("tag");
+  };
+
+  const handleLeave = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+    if (garmentImageUrlRef.current) {
+      URL.revokeObjectURL(garmentImageUrlRef.current);
+      garmentImageUrlRef.current = null;
+    }
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
+      tagImageUrlRef.current = null;
+    }
+    garmentBlobRef.current = null;
+    tagBlobRef.current = null;
+  };
+
+  // Register scan flow listener for popstate handling
   useEffect(() => {
-    registerScanBackHandler({
-      getStep: () => scanStepRef.current,
-      onStay: (nextStep: ScanStep) => {
-        scanStepRef.current = nextStep;
+    registerScanFlowListener({
+      hasGarmentImage: () => garmentImageUrlRef.current !== null,
+      hasTagImage: () => tagImageUrlRef.current !== null,
+      onSetStep: (nextStep: ScanStep) => {
         switch (nextStep) {
-          case "tag_live":
-            returnToTagLive();
+          case "garment_live":
+            transitionToGarmentLive();
             break;
           case "garment_review":
-            returnToGarmentReview();
+            transitionToGarmentReview();
             break;
-          case "garment_live":
-            handleRetakeGarment();
+          case "tag_live":
+            transitionToTagLive();
+            break;
+          case "tag_scanning":
             break;
         }
       },
-      onLeave: () => {
-        scanStepRef.current = "garment_live";
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-          abortControllerRef.current = null;
-        }
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop());
-        }
-        if (garmentImageUrlRef.current) {
-          URL.revokeObjectURL(garmentImageUrlRef.current);
-          garmentImageUrlRef.current = null;
-        }
-        if (tagImageUrlRef.current) {
-          URL.revokeObjectURL(tagImageUrlRef.current);
-          tagImageUrlRef.current = null;
-        }
-      },
+      onLeave: handleLeave,
+      onResetToGarmentLive: transitionToGarmentLive,
     });
 
     return () => {
-      registerScanBackHandler(null);
+      registerScanFlowListener(null);
     };
   }, [stream]);
 
@@ -220,36 +222,47 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     }
   }, [isFrozen, stream]);
 
+  const handleProceedToTag = () => {
+    pushScanStep("tag_live");
+    transitionToTagLive();
+  };
+
   const handleCaptureGarment = async () => {
+    pushScanStep("garment_review");
     setError(null);
     const blob = await captureFrameBlob(videoRef.current);
     if (!blob) {
+      window.history.back();
       setError("Unable to capture image from camera preview.");
       return;
     }
 
-    if (garmentImageUrl) {
-      URL.revokeObjectURL(garmentImageUrl);
+    if (garmentImageUrlRef.current) {
+      URL.revokeObjectURL(garmentImageUrlRef.current);
     }
     const url = URL.createObjectURL(blob);
-    scanStepRef.current = "garment_review";
+    garmentBlobRef.current = blob;
+    garmentImageUrlRef.current = url;
     setGarmentBlob(blob);
     setGarmentImageUrl(url);
   };
 
   const handleCaptureTag = async () => {
+    pushScanStep("tag_scanning");
     setError(null);
     const blob = await captureFrameBlob(videoRef.current);
     if (!blob) {
+      window.history.back();
       setError("Unable to capture image from camera preview.");
       return;
     }
 
-    if (tagImageUrl) {
-      URL.revokeObjectURL(tagImageUrl);
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
     }
     const url = URL.createObjectURL(blob);
-    scanStepRef.current = "tag_scanning";
+    tagBlobRef.current = blob;
+    tagImageUrlRef.current = url;
     setTagBlob(blob);
     setTagImageUrl(url);
     setIsLoading(true);
@@ -262,9 +275,15 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       if (controller.signal.aborted) {
         return;
       }
-      if (garmentBlob && garmentImageUrl) {
+      if (garmentBlobRef.current && garmentImageUrlRef.current) {
         completedRef.current = true;
-        onScanComplete(result, garmentBlob, garmentImageUrl, blob, url);
+        onScanComplete(
+          result,
+          garmentBlobRef.current,
+          garmentImageUrlRef.current,
+          blob,
+          url
+        );
       }
     } catch (fetchErr: unknown) {
       if (
@@ -278,6 +297,8 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
         fetchErr instanceof Error ? fetchErr.message : "Failed to scan care tag";
       setError(`Scan error: ${message}`);
       URL.revokeObjectURL(url);
+      tagBlobRef.current = null;
+      tagImageUrlRef.current = null;
       setTagBlob(null);
       setTagImageUrl(null);
     } finally {
@@ -327,7 +348,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
           }
-          registerScanBackHandler(null);
+          handleLeave();
           onClose();
         }}
         className="camera-close-btn"
@@ -375,12 +396,12 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
         </button>
       )}
 
-      {/* Review state: Retake (ghost) & Next (tonal) side by side */}
+      {/* Review state: Retake (calls history.back()) & Next side by side */}
       {step === "garment" && garmentImageUrl && (
         <div className="camera-review-row">
           <button
             type="button"
-            onClick={handleRetakeGarment}
+            onClick={() => window.history.back()}
             className="camera-retake-btn"
           >
             Retake

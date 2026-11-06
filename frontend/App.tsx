@@ -17,6 +17,7 @@ import { supabase } from "./services/supabaseClient.ts";
 import {
   closeOverlay,
   closeOverlayAndGoToGallery,
+  exitScanToGallery,
   goBack,
   goToAuth,
   goToDetail,
@@ -25,6 +26,8 @@ import {
   goToScan,
   initNavigation,
   openOverlay,
+  registerResultsStateListener,
+  scanAnotherFromResults,
   useRoute,
 } from "./lib/navigation.ts";
 
@@ -48,7 +51,20 @@ export function App() {
   const [tagBlob, setTagBlob] = useState<Blob | null>(null);
   const [tagImageUrl, setTagImageUrl] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const scanResultRef = useRef<ScanResult | null>(null);
   const [activeScanSessionId, setActiveScanSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    registerResultsStateListener({
+      hasResultData: () => scanResultRef.current !== null,
+      onLeave: () => {
+        handleResetScan();
+      },
+    });
+    return () => {
+      registerResultsStateListener(null);
+    };
+  }, []);
 
   const loadScans = async (token?: string) => {
     setIsScansLoading(true);
@@ -190,6 +206,7 @@ export function App() {
     setTagBlob(capturedTagBlob);
     setTagImageUrl(capturedTagUrl);
     setScanResult(result);
+    scanResultRef.current = result;
     goToResults();
 
     // As soon as POST /scan succeeds, start saving in the background
@@ -208,6 +225,7 @@ export function App() {
     setTagBlob(null);
     setTagImageUrl(null);
     setScanResult(null);
+    scanResultRef.current = null;
     setActiveScanSessionId(null);
   };
 
@@ -320,7 +338,7 @@ export function App() {
           onScanComplete={handleScanComplete}
           onClose={() => {
             handleResetScan();
-            goBack();
+            exitScanToGallery();
           }}
         />
       ) : (
@@ -409,14 +427,17 @@ export function App() {
                 scanSessionId={activeScanSessionId || undefined}
                 onDone={() => {
                   handleResetScan();
-                  goBack();
+                  exitScanToGallery();
                   loadScans();
                 }}
                 onScanAnother={() => {
                   handleResetScan();
-                  goToScan(true);
+                  scanAnotherFromResults();
                 }}
-                onUpdateResult={setScanResult}
+                onUpdateResult={(updated) => {
+                  scanResultRef.current = updated;
+                  setScanResult(updated);
+                }}
               />
             </main>
           )}

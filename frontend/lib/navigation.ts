@@ -4,11 +4,20 @@ import { addDebugLog, isDebugEnabled } from "./debugHistory.ts";
 export type Screen = "auth" | "gallery" | "scan" | "results" | "detail";
 export type Overlay = "account" | "picker" | "delete";
 
+export type ScanStep =
+  | "garment_live"
+  | "garment_review"
+  | "tag_live"
+  | "tag_review"
+  | "tag_scanning";
+
 export interface NavigationState {
   app: true;
   screen: Screen;
   id?: string;
   overlay?: Overlay;
+  step?: ScanStep;
+  depth?: number;
 }
 
 // --- Pure Route-Transition Rules (No DOM access, fully testable) ---
@@ -26,7 +35,7 @@ export function sanitizeRoute(
     typeof rawState !== "object" ||
     (rawState as { app?: boolean }).app !== true
   ) {
-    return { app: true, screen: "gallery" };
+    return { app: true, screen: "gallery", depth: 0 };
   }
 
   const state = rawState as Partial<NavigationState>;
@@ -39,32 +48,37 @@ export function sanitizeRoute(
     state.screen === "detail" ||
     Boolean(state.overlay)
   ) {
-    return { app: true, screen: "gallery" };
+    return { app: true, screen: "gallery", depth: 0 };
   }
 
   if (state.screen === "auth") {
-    return { app: true, screen: "gallery" };
+    return { app: true, screen: "gallery", depth: 0 };
   }
 
   if (state.screen === "gallery") {
-    return { app: true, screen: "gallery" };
+    return { app: true, screen: "gallery", depth: 0 };
   }
 
-  return { app: true, screen: "gallery" };
+  return { app: true, screen: "gallery", depth: 0 };
 }
 
 export function nextRouteOnBack(
   route: NavigationState
 ): NavigationState | null {
   if (route.overlay) {
-    return { app: true, screen: route.screen, id: route.id };
+    return {
+      app: true,
+      screen: route.screen,
+      id: route.id,
+      depth: route.depth,
+    };
   }
 
   switch (route.screen) {
     case "detail":
     case "results":
     case "scan":
-      return { app: true, screen: "gallery" };
+      return { app: true, screen: "gallery", depth: 0 };
     case "gallery":
     case "auth":
       return null;
@@ -72,13 +86,6 @@ export function nextRouteOnBack(
       return null;
   }
 }
-
-export type ScanStep =
-  | "garment_live"
-  | "garment_review"
-  | "tag_live"
-  | "tag_review"
-  | "tag_scanning";
 
 export function previousScanStep(step: ScanStep): ScanStep | null {
   switch (step) {
@@ -124,31 +131,104 @@ export function getScanStep(options: {
   return options.hasTagImage ? "tag_review" : "tag_live";
 }
 
+// --- Safeguard helper ---
+
+export function safePushState(
+  state: NavigationState,
+  title = "",
+  url?: string | URL | null
+) {
+  if (typeof window === "undefined") return;
+
+  if (
+    typeof navigator !== "undefined" &&
+    "userActivation" in navigator &&
+    navigator.userActivation &&
+    !navigator.userActivation.isActive
+  ) {
+    const stack = new Error().stack || "";
+    console.warn("pushState without user activation", stack);
+  }
+
+  window.history.pushState(state, title, url);
+}
+
+export function installPushStateGuard() {
+  if (typeof window === "undefined") return;
+  const history = window.history as any;
+  if (!history || history.__pushStateGuarded) return;
+
+  const original = history.pushState.bind(history);
+  const guarded = function (
+    state: any,
+    title: string,
+    url?: string | URL | null
+  ) {
+    if (
+      typeof navigator !== "undefined" &&
+      "userActivation" in navigator &&
+      navigator.userActivation &&
+      !navigator.userActivation.isActive
+    ) {
+      const stack = new Error().stack || "";
+      console.warn("pushState without user activation", stack);
+    }
+    return original(state, title, url);
+  };
+  guarded.__pushStateGuarded = true;
+  history.pushState = guarded;
+}
+
 // --- State Store & History API Integration ---
 
-let currentRoute: NavigationState = { app: true, screen: "gallery" };
+let currentRoute: NavigationState = { app: true, screen: "gallery", depth: 0 };
 const listeners = new Set<(route: NavigationState) => void>();
 let activeWindow: (Window & typeof globalThis) | null = null;
 
-export interface ScanBackHandler {
-  getStep: () => ScanStep;
-  onStay: (nextStep: ScanStep) => void;
+export interface ScanFlowListener {
+  hasGarmentImage: () => boolean;
+  hasTagImage: () => boolean;
+  onSetStep: (step: ScanStep) => void;
   onLeave: () => void;
+  onResetToGarmentLive?: () => void;
 }
 
-let scanBackHandler: ScanBackHandler | null = null;
-let legacyScanBackInterceptor: (() => boolean) | null = null;
+export interface ResultsStateListener {
+  hasResultData: () => boolean;
+  onLeave?: () => void;
+}
+
+export interface ScanBackHandler {
+  getStep?: () => ScanStep;
+  onStay?: (nextStep: ScanStep) => void;
+  onLeave?: () => void;
+}
+
+let scanFlowListener: ScanFlowListener | null = null;
+let resultsListener: ResultsStateListener | null = null;
+let isScanningAnother = false;
+
+export function registerScanFlowListener(listener: ScanFlowListener | null) {
+  scanFlowListener = listener;
+}
+
+export function registerResultsStateListener(
+  listener: ResultsStateListener | null
+) {
+  resultsListener = listener;
+}
 
 export function registerScanBackHandler(handler: ScanBackHandler | null) {
-  scanBackHandler = handler;
-  legacyScanBackInterceptor = null;
-}
-
-export type ScanBackInterceptor = () => boolean;
-
-export function registerScanBackInterceptor(fn: ScanBackInterceptor | null) {
-  legacyScanBackInterceptor = fn;
-  scanBackHandler = null;
+  if (!handler) {
+    scanFlowListener = null;
+    return;
+  }
+  scanFlowListener = {
+    hasGarmentImage: () => true,
+    hasTagImage: () => true,
+    onSetStep: (step) => handler.onStay?.(step),
+    onLeave: () => handler.onLeave?.(),
+  };
 }
 
 function notify() {
@@ -161,7 +241,9 @@ export function getRoute(): NavigationState {
   return currentRoute;
 }
 
-export function subscribe(listener: (route: NavigationState) => void): () => void {
+export function subscribe(
+  listener: (route: NavigationState) => void
+): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
@@ -173,111 +255,120 @@ export function useRoute(): NavigationState {
 }
 
 export function getCurrentScanStep(): ScanStep | null {
-  return scanBackHandler ? scanBackHandler.getStep() : null;
+  if (currentRoute.screen === "scan") {
+    return currentRoute.step ?? "garment_live";
+  }
+  return null;
 }
 
 function handlePopState(event: PopStateEvent) {
-  // Invariant: while the user is in the scan flow, the entry on top of
-  // the stack is the scan guard, and the entry beneath it is the gallery.
-  if (currentRoute.screen === "scan" && !currentRoute.overlay) {
-    if (scanBackHandler) {
-      const currentStep = scanBackHandler.getStep();
-      const decision = decideScanBack(currentStep);
-
-      if (decision.action === "stay") {
-        if (isDebugEnabled()) {
-          addDebugLog({
-            type: "popstate",
-            details: `state=${JSON.stringify(event.state)}, decision=stay (nextStep=${decision.nextStep})`,
-          });
-        }
-        scanBackHandler.onStay(decision.nextStep);
-        // ALWAYS restore the guard by pushing the scan entry again
-        if (typeof window !== "undefined") {
-          window.history.pushState({ app: true, screen: "scan" }, "");
-        }
-        currentRoute = { app: true, screen: "scan" };
-        notify();
-        return;
-      } else {
-        if (isDebugEnabled()) {
-          addDebugLog({
-            type: "popstate",
-            details: `state=${JSON.stringify(event.state)}, decision=leave`,
-          });
-        }
-        // On "leave" it does not push, it switches to the gallery, stops the stream and
-        // discards photos, and it never calls history.back() again (the popstate already moved the browser).
-        scanBackHandler.onLeave();
-        currentRoute = { app: true, screen: "gallery" };
-        notify();
-        return;
-      }
-    }
-
-    if (legacyScanBackInterceptor) {
-      const intercepted = legacyScanBackInterceptor();
-      if (intercepted) {
-        if (isDebugEnabled()) {
-          addDebugLog({
-            type: "popstate",
-            details: `state=${JSON.stringify(event.state)}, decision=stay (legacy)`,
-          });
-        }
-        if (typeof window !== "undefined") {
-          window.history.pushState({ app: true, screen: "scan" }, "");
-        }
-        currentRoute = { app: true, screen: "scan" };
-        notify();
-        return;
-      } else {
-        if (isDebugEnabled()) {
-          addDebugLog({
-            type: "popstate",
-            details: `state=${JSON.stringify(event.state)}, decision=leave (legacy)`,
-          });
-        }
-        currentRoute = { app: true, screen: "gallery" };
-        notify();
-        return;
-      }
-    }
-
-    if (isDebugEnabled()) {
-      addDebugLog({
-        type: "popstate",
-        details: `state=${JSON.stringify(event.state)}, decision=leave (no handler)`,
-      });
-    }
-    currentRoute = { app: true, screen: "gallery" };
-    notify();
-    return;
-  }
+  // Invariant: popstate NEVER pushes. It only:
+  // - Dispatches step state updates through shared step-transition functions
+  // - Handles back-from-results by calling history.go(-state.depth)
+  // - Handles steps requiring missing data by calling history.go(-state.depth)
+  // - Handles back-to-gallery by cleaning up and rendering gallery
+  // - Never calls history.back() or go() when simply moving between scan steps
+  const raw = event.state;
+  const isApp = raw && typeof raw === "object" && (raw as any).app === true;
+  const state: NavigationState = isApp
+    ? (raw as NavigationState)
+    : { app: true, screen: "gallery", depth: 0 };
 
   if (isDebugEnabled()) {
     addDebugLog({
       type: "popstate",
-      details: `state=${JSON.stringify(event.state)}, decision=n/a (screen=${currentRoute.screen})`,
+      details: `state=${JSON.stringify(event.state)}, currentRoute=${JSON.stringify(currentRoute)}`,
     });
   }
 
-  const raw = event.state;
-  if (!raw || raw.app !== true) {
-    // Ignore popstate events whose state does not have app: true (treat them as the gallery)
-    currentRoute = { app: true, screen: "gallery" };
-  } else {
+  // 1. Check if this popstate was triggered by scanAnotherFromResults()
+  if (isScanningAnother) {
+    isScanningAnother = false;
     currentRoute = {
       app: true,
-      screen: raw.screen,
-      id: raw.id,
-      overlay: raw.overlay,
+      screen: "scan",
+      step: "garment_live",
+      depth: 1,
     };
+    scanFlowListener?.onResetToGarmentLive?.();
+    notify();
+    return;
   }
+
+  // 2. Back-from-results: if currentRoute is results and popped entry is scan
+  if (currentRoute.screen === "results" && state.screen === "scan") {
+    const targetDepth = state.depth ?? 0;
+    if (typeof window !== "undefined" && targetDepth > 0) {
+      window.history.go(-targetDepth);
+      return;
+    }
+  }
+
+  // 3. Popped entry is gallery (or missing/non-app state)
+  if (state.screen === "gallery") {
+    scanFlowListener?.onLeave?.();
+    resultsListener?.onLeave?.();
+    currentRoute = { app: true, screen: "gallery", depth: 0 };
+    notify();
+    return;
+  }
+
+  // 4. Popped entry is results
+  if (state.screen === "results") {
+    if (resultsListener && !resultsListener.hasResultData()) {
+      const depth = state.depth ?? 0;
+      if (typeof window !== "undefined" && depth > 0) {
+        window.history.go(-depth);
+        return;
+      }
+      goToGallery(true);
+      return;
+    }
+    currentRoute = state;
+    notify();
+    return;
+  }
+
+  // 5. Popped entry is scan
+  if (state.screen === "scan") {
+    const step = state.step ?? "garment_live";
+    const requiresGarment =
+      step === "garment_review" ||
+      step === "tag_live" ||
+      step === "tag_review" ||
+      step === "tag_scanning";
+
+    if (
+      requiresGarment &&
+      scanFlowListener &&
+      !scanFlowListener.hasGarmentImage()
+    ) {
+      // Step requires data no longer in memory -> jump to gallery
+      const depth = state.depth ?? 0;
+      if (typeof window !== "undefined" && depth > 0) {
+        window.history.go(-depth);
+        return;
+      }
+      goToGallery(true);
+      return;
+    }
+
+    // Step has required data or is garment_live: dispatch step update
+    scanFlowListener?.onSetStep?.(step);
+    currentRoute = state;
+    notify();
+    return;
+  }
+
+  // 6. Other screens: detail, auth, overlays
+  currentRoute = state;
   notify();
 }
 
 export function initNavigation(hasSession: boolean) {
   if (typeof window === "undefined") return;
+
+  installPushStateGuard();
 
   const initial = sanitizeRoute(window.history.state, hasSession);
   window.history.replaceState(initial, "");
@@ -292,11 +383,11 @@ export function initNavigation(hasSession: boolean) {
 
 export function goToGallery(replace = false) {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "gallery" };
+  const state: NavigationState = { app: true, screen: "gallery", depth: 0 };
   if (replace) {
     window.history.replaceState(state, "");
   } else {
-    window.history.pushState(state, "");
+    safePushState(state, "");
   }
   currentRoute = state;
   notify();
@@ -304,35 +395,90 @@ export function goToGallery(replace = false) {
 
 export function goToDetail(id: string) {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "detail", id };
-  window.history.pushState(state, "");
+  const state: NavigationState = {
+    app: true,
+    screen: "detail",
+    id,
+    depth: 1,
+  };
+  safePushState(state, "");
   currentRoute = state;
   notify();
 }
 
-export function goToScan(replace = false) {
+export function goToScan() {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "scan" };
-  if (replace) {
-    window.history.replaceState(state, "");
-  } else {
-    window.history.pushState(state, "");
-  }
+  const state: NavigationState = {
+    app: true,
+    screen: "scan",
+    step: "garment_live",
+    depth: 1,
+  };
+  safePushState(state, "");
+  currentRoute = state;
+  notify();
+}
+
+export function pushScanStep(step: ScanStep) {
+  if (typeof window === "undefined") return;
+  const nextDepth = (currentRoute.depth ?? 0) + 1;
+  const state: NavigationState = {
+    app: true,
+    screen: "scan",
+    step,
+    depth: nextDepth,
+  };
+  safePushState(state, "");
   currentRoute = state;
   notify();
 }
 
 export function goToResults() {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "results" };
+  const depth = currentRoute.depth ?? 4;
+  const state: NavigationState = {
+    app: true,
+    screen: "results",
+    depth,
+  };
   window.history.replaceState(state, "");
   currentRoute = state;
   notify();
 }
 
+export function exitScanToGallery() {
+  if (typeof window === "undefined") return;
+  const depth = currentRoute.depth ?? 0;
+  if (depth > 0) {
+    window.history.go(-depth);
+  } else {
+    goToGallery(true);
+  }
+}
+
+export function scanAnotherFromResults() {
+  if (typeof window === "undefined") return;
+  const depth = currentRoute.depth ?? 1;
+  isScanningAnother = true;
+  const delta = -(depth - 1);
+  if (delta !== 0) {
+    window.history.go(delta);
+  } else {
+    isScanningAnother = false;
+    currentRoute = {
+      app: true,
+      screen: "scan",
+      step: "garment_live",
+      depth: 1,
+    };
+    scanFlowListener?.onResetToGarmentLive?.();
+    notify();
+  }
+}
+
 export function goToAuth() {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "auth" };
+  const state: NavigationState = { app: true, screen: "auth", depth: 0 };
   window.history.replaceState(state, "");
   currentRoute = state;
   notify();
@@ -344,12 +490,14 @@ export function openOverlay(overlay: Overlay) {
     app: true,
     screen: currentRoute.screen,
     id: currentRoute.id,
+    step: currentRoute.step,
+    depth: currentRoute.depth,
     overlay,
   };
   if (currentRoute.overlay) {
     window.history.replaceState(state, "");
   } else {
-    window.history.pushState(state, "");
+    safePushState(state, "");
   }
   currentRoute = state;
   notify();
@@ -366,7 +514,7 @@ export function closeOverlayAndGoToGallery() {
   if (typeof window === "undefined") return;
   if (currentRoute.overlay && currentRoute.screen === "detail") {
     window.history.go(-2);
-    currentRoute = { app: true, screen: "gallery" };
+    currentRoute = { app: true, screen: "gallery", depth: 0 };
     notify();
   } else if (currentRoute.screen === "detail") {
     window.history.back();
