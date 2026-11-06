@@ -96,12 +96,24 @@ export function previousScanStep(step: ScanStep): ScanStep | null {
   }
 }
 
+export type ScanBackDecision =
+  | { action: "stay"; nextStep: ScanStep }
+  | { action: "leave" };
+
+export function decideScanBack(step: ScanStep): ScanBackDecision {
+  const prev = previousScanStep(step);
+  if (prev) {
+    return { action: "stay", nextStep: prev };
+  }
+  return { action: "leave" };
+}
+
 export function canInterceptScanBack(
   step: ScanStep | "garment" | "tag"
 ): boolean {
   if (step === "tag") return true;
   if (step === "garment") return false;
-  return previousScanStep(step) !== null;
+  return decideScanBack(step).action === "stay";
 }
 
 export function getScanNextStepOnBack(
@@ -109,7 +121,8 @@ export function getScanNextStepOnBack(
 ): ScanStep | "garment" | null {
   if (step === "tag") return "garment";
   if (step === "garment") return null;
-  return previousScanStep(step);
+  const decision = decideScanBack(step);
+  return decision.action === "stay" ? decision.nextStep : null;
 }
 
 export function getScanStep(options: {
@@ -133,11 +146,25 @@ let currentRoute: NavigationState = { app: true, screen: "gallery" };
 const listeners = new Set<(route: NavigationState) => void>();
 let activeWindow: (Window & typeof globalThis) | null = null;
 
-type ScanBackInterceptor = () => boolean;
-let scanBackInterceptor: ScanBackInterceptor | null = null;
+export interface ScanBackHandler {
+  getStep: () => ScanStep;
+  onStay: (nextStep: ScanStep) => void;
+  onLeave: () => void;
+}
+
+let scanBackHandler: ScanBackHandler | null = null;
+let legacyScanBackInterceptor: (() => boolean) | null = null;
+
+export function registerScanBackHandler(handler: ScanBackHandler | null) {
+  scanBackHandler = handler;
+  legacyScanBackInterceptor = null;
+}
+
+export type ScanBackInterceptor = () => boolean;
 
 export function registerScanBackInterceptor(fn: ScanBackInterceptor | null) {
-  scanBackInterceptor = fn;
+  legacyScanBackInterceptor = fn;
+  scanBackHandler = null;
 }
 
 function notify() {
@@ -162,21 +189,51 @@ export function useRoute(): NavigationState {
 }
 
 function handlePopState(event: PopStateEvent) {
-  // If we are currently in the scan flow without an overlay and in a step that intercepts back
-  if (
-    currentRoute.screen === "scan" &&
-    !currentRoute.overlay &&
-    scanBackInterceptor
-  ) {
-    const intercepted = scanBackInterceptor();
-    if (intercepted) {
-      // User moved from tag step to garment review state with photo kept.
-      // Re-push scan entry so the next back press is still guarded.
-      window.history.pushState({ app: true, screen: "scan" }, "");
-      currentRoute = { app: true, screen: "scan" };
-      notify();
-      return;
+  // Invariant: while the user is in the scan flow, the entry on top of
+  // the stack is the scan guard, and the entry beneath it is the gallery.
+  if (currentRoute.screen === "scan" && !currentRoute.overlay) {
+    if (scanBackHandler) {
+      const currentStep = scanBackHandler.getStep();
+      const decision = decideScanBack(currentStep);
+
+      if (decision.action === "stay") {
+        scanBackHandler.onStay(decision.nextStep);
+        // ALWAYS restore the guard by pushing the scan entry again
+        if (typeof window !== "undefined") {
+          window.history.pushState({ app: true, screen: "scan" }, "");
+        }
+        currentRoute = { app: true, screen: "scan" };
+        notify();
+        return;
+      } else {
+        // On "leave" it does not push, it switches to the gallery, stops the stream and
+        // discards photos, and it never calls history.back() again (the popstate already moved the browser).
+        scanBackHandler.onLeave();
+        currentRoute = { app: true, screen: "gallery" };
+        notify();
+        return;
+      }
     }
+
+    if (legacyScanBackInterceptor) {
+      const intercepted = legacyScanBackInterceptor();
+      if (intercepted) {
+        if (typeof window !== "undefined") {
+          window.history.pushState({ app: true, screen: "scan" }, "");
+        }
+        currentRoute = { app: true, screen: "scan" };
+        notify();
+        return;
+      } else {
+        currentRoute = { app: true, screen: "gallery" };
+        notify();
+        return;
+      }
+    }
+
+    currentRoute = { app: true, screen: "gallery" };
+    notify();
+    return;
   }
 
   const raw = event.state;

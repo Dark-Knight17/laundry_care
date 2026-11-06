@@ -4,7 +4,7 @@ import { captureFrameBlob } from "../lib/camera.ts";
 import {
   getScanStep,
   previousScanStep,
-  registerScanBackInterceptor,
+  registerScanBackHandler,
   type ScanStep,
 } from "../lib/navigation.ts";
 import { scanCareTag } from "../services/api.ts";
@@ -48,9 +48,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   });
 
   const scanStepRef = useRef<ScanStep>(currentScanStep);
-  useEffect(() => {
-    scanStepRef.current = currentScanStep;
-  }, [currentScanStep]);
+  scanStepRef.current = currentScanStep;
 
   useEffect(() => {
     garmentImageUrlRef.current = garmentImageUrl;
@@ -122,8 +120,10 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   }, [stream]);
 
   const handleRetakeGarment = () => {
+    scanStepRef.current = "garment_live";
     if (garmentImageUrlRef.current) {
       URL.revokeObjectURL(garmentImageUrlRef.current);
+      garmentImageUrlRef.current = null;
     }
     setGarmentBlob(null);
     setGarmentImageUrl(null);
@@ -131,13 +131,16 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   };
 
   const handleProceedToTag = () => {
+    scanStepRef.current = "tag_live";
     setError(null);
     setStep("tag");
   };
 
   const returnToGarmentReview = () => {
+    scanStepRef.current = "garment_review";
     if (tagImageUrlRef.current) {
       URL.revokeObjectURL(tagImageUrlRef.current);
+      tagImageUrlRef.current = null;
     }
     setTagBlob(null);
     setTagImageUrl(null);
@@ -146,12 +149,14 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   };
 
   const returnToTagLive = () => {
+    scanStepRef.current = "tag_live";
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
     if (tagImageUrlRef.current) {
       URL.revokeObjectURL(tagImageUrlRef.current);
+      tagImageUrlRef.current = null;
     }
     setTagBlob(null);
     setTagImageUrl(null);
@@ -159,36 +164,48 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     setError(null);
   };
 
-  // Intercept back press inside the scan flow
+  // Register back handling inside scan flow
   useEffect(() => {
-    registerScanBackInterceptor(() => {
-      const activeStep = scanStepRef.current;
-      const prev = previousScanStep(activeStep);
-      if (!prev) {
-        // garment_live: do not intercept, leaves to gallery
-        return false;
-      }
-
-      switch (activeStep) {
-        case "tag_scanning":
-        case "tag_review":
-          returnToTagLive();
-          return true;
-        case "tag_live":
-          returnToGarmentReview();
-          return true;
-        case "garment_review":
-          handleRetakeGarment();
-          return true;
-        default:
-          return false;
-      }
+    registerScanBackHandler({
+      getStep: () => scanStepRef.current,
+      onStay: (nextStep: ScanStep) => {
+        scanStepRef.current = nextStep;
+        switch (nextStep) {
+          case "tag_live":
+            returnToTagLive();
+            break;
+          case "garment_review":
+            returnToGarmentReview();
+            break;
+          case "garment_live":
+            handleRetakeGarment();
+            break;
+        }
+      },
+      onLeave: () => {
+        scanStepRef.current = "garment_live";
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        if (garmentImageUrlRef.current) {
+          URL.revokeObjectURL(garmentImageUrlRef.current);
+          garmentImageUrlRef.current = null;
+        }
+        if (tagImageUrlRef.current) {
+          URL.revokeObjectURL(tagImageUrlRef.current);
+          tagImageUrlRef.current = null;
+        }
+      },
     });
 
     return () => {
-      registerScanBackInterceptor(null);
+      registerScanBackHandler(null);
     };
-  }, []);
+  }, [stream]);
 
   const isFrozen =
     (step === "garment" && garmentImageUrl !== null) ||
@@ -215,6 +232,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       URL.revokeObjectURL(garmentImageUrl);
     }
     const url = URL.createObjectURL(blob);
+    scanStepRef.current = "garment_review";
     setGarmentBlob(blob);
     setGarmentImageUrl(url);
   };
@@ -231,6 +249,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       URL.revokeObjectURL(tagImageUrl);
     }
     const url = URL.createObjectURL(blob);
+    scanStepRef.current = "tag_scanning";
     setTagBlob(blob);
     setTagImageUrl(url);
     setIsLoading(true);
@@ -308,7 +327,7 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
           }
-          registerScanBackInterceptor(null);
+          registerScanBackHandler(null);
           onClose();
         }}
         className="camera-close-btn"

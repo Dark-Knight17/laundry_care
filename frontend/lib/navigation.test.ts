@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   canInterceptScanBack,
+  decideScanBack,
+  getRoute,
   getScanNextStepOnBack,
   getScanStep,
+  goToDetail,
+  goToGallery,
+  goToResults,
+  goToScan,
+  initNavigation,
   nextRouteOnBack,
+  openOverlay,
   previousScanStep,
+  registerScanBackHandler,
+  registerScanBackInterceptor,
   sanitizeRoute,
   type NavigationState,
   type ScanStep,
@@ -540,6 +550,330 @@ describe("navigation route rules", () => {
       // Second rapid back: leaves results to gallery
       mockHistory.back();
       expect(getRoute()).toEqual({ app: true, screen: "gallery" });
+    });
+  });
+
+  describe("decideScanBack pure decision function", () => {
+    test("tag_scanning returns stay with tag_live", () => {
+      expect(decideScanBack("tag_scanning")).toEqual({
+        action: "stay",
+        nextStep: "tag_live",
+      });
+    });
+
+    test("tag_review returns stay with tag_live", () => {
+      expect(decideScanBack("tag_review")).toEqual({
+        action: "stay",
+        nextStep: "tag_live",
+      });
+    });
+
+    test("tag_live returns stay with garment_review", () => {
+      expect(decideScanBack("tag_live")).toEqual({
+        action: "stay",
+        nextStep: "garment_review",
+      });
+    });
+
+    test("garment_review returns stay with garment_live", () => {
+      expect(decideScanBack("garment_review")).toEqual({
+        action: "stay",
+        nextStep: "garment_live",
+      });
+    });
+
+    test("garment_live returns leave", () => {
+      expect(decideScanBack("garment_live")).toEqual({
+        action: "leave",
+      });
+    });
+  });
+
+  describe("fake history model - scan flow stack invariant", () => {
+    class FakeHistoryModel {
+      private entries: any[];
+      index: number;
+      private listeners: Set<(e: { state: any }) => void>;
+
+      constructor() {
+        this.entries = [null];
+        this.index = 0;
+        this.listeners = new Set();
+      }
+
+      get state(): any {
+        return this.entries[this.index] ?? null;
+      }
+
+      get stack(): any[] {
+        return this.entries.slice(0, this.index + 1);
+      }
+
+      get depth(): number {
+        return this.index + 1;
+      }
+
+      get length(): number {
+        return this.index + 1;
+      }
+
+      pushState(data: any, _unused?: string) {
+        this.entries = this.entries.slice(0, this.index + 1);
+        this.entries.push(data);
+        this.index = this.entries.length - 1;
+      }
+
+      replaceState(data: any, _unused?: string) {
+        if (this.index >= 0) {
+          this.entries[this.index] = data;
+        } else {
+          this.entries = [data];
+          this.index = 0;
+        }
+      }
+
+      back() {
+        this.go(-1);
+      }
+
+      go(delta: number) {
+        const target = this.index + delta;
+        if (target >= 0 && target < this.entries.length) {
+          this.index = target;
+          const event = { state: this.entries[this.index] };
+          for (const listener of Array.from(this.listeners)) {
+            listener(event);
+          }
+        }
+      }
+
+      addListener(fn: (e: { state: any }) => void) {
+        this.listeners.add(fn);
+      }
+
+      removeListener(fn: (e: { state: any }) => void) {
+        this.listeners.delete(fn);
+      }
+    }
+
+    let fakeHistory: FakeHistoryModel;
+
+    beforeEach(() => {
+      fakeHistory = new FakeHistoryModel();
+      (globalThis as any).window = {
+        history: fakeHistory,
+        addEventListener(type: string, fn: any) {
+          if (type === "popstate") {
+            fakeHistory.addListener(fn);
+          }
+        },
+        removeEventListener(type: string, fn: any) {
+          if (type === "popstate") {
+            fakeHistory.removeListener(fn);
+          }
+        },
+      };
+    });
+
+    afterEach(() => {
+      registerScanBackHandler(null);
+      delete (globalThis as any).window;
+    });
+
+    function setupScanFlow() {
+      let step: ScanStep = "garment_live";
+      let streamStopped = false;
+      let photosDiscarded = false;
+      let garmentPhotoKept = false;
+
+      registerScanBackHandler({
+        getStep: () => step,
+        onStay: (nextStep: ScanStep) => {
+          step = nextStep;
+          if (nextStep === "garment_live") {
+            photosDiscarded = true;
+            garmentPhotoKept = false;
+          } else if (nextStep === "garment_review") {
+            garmentPhotoKept = true;
+          }
+        },
+        onLeave: () => {
+          streamStopped = true;
+          photosDiscarded = true;
+          garmentPhotoKept = false;
+        },
+      });
+
+      return {
+        get step() {
+          return step;
+        },
+        get streamStopped() {
+          return streamStopped;
+        },
+        get photosDiscarded() {
+          return photosDiscarded;
+        },
+        get garmentPhotoKept() {
+          return garmentPhotoKept;
+        },
+        takeGarmentPhoto() {
+          step = "garment_review";
+          garmentPhotoKept = true;
+          photosDiscarded = false;
+        },
+        clickNext() {
+          if (step === "garment_review") {
+            step = "tag_live";
+          }
+        },
+        clickRetake() {
+          if (step === "garment_review") {
+            step = "garment_live";
+            photosDiscarded = true;
+            garmentPhotoKept = false;
+          } else if (step === "tag_review") {
+            step = "tag_live";
+          }
+        },
+      };
+    }
+
+    test("gallery -> scan -> back: lands on gallery, stack depth is 1 ([gallery])", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      expect(flow.step).toBe("garment_live");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      fakeHistory.back();
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+    });
+
+    test("gallery -> scan -> garment photo -> back: lands on garment live camera, stack depth is 2 ([gallery, scan])", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      flow.takeGarmentPhoto();
+      expect(flow.step).toBe("garment_review");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      fakeHistory.back();
+      expect(flow.step).toBe("garment_live");
+      expect(getRoute().screen).toBe("scan");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+    });
+
+    test("same as previous, then back again: lands on gallery, stack depth is 1 ([gallery]), stream stopped, photos discarded", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      flow.takeGarmentPhoto();
+      fakeHistory.back();
+      expect(flow.step).toBe("garment_live");
+      expect(fakeHistory.length).toBe(2);
+
+      fakeHistory.back();
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+      expect(flow.streamStopped).toBe(true);
+      expect(flow.photosDiscarded).toBe(true);
+    });
+
+    test("gallery -> scan -> garment photo -> Next -> back: lands on garment review with photo kept, stack depth is 2 ([gallery, scan]); back again: live garment camera, depth 2; back again: gallery, depth 1", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      flow.takeGarmentPhoto();
+      flow.clickNext();
+      expect(flow.step).toBe("tag_live");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      // 1st back: lands on garment review with photo kept, depth 2
+      fakeHistory.back();
+      expect(flow.step).toBe("garment_review");
+      expect(flow.garmentPhotoKept).toBe(true);
+      expect(getRoute().screen).toBe("scan");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      // 2nd back: live garment camera, depth 2
+      fakeHistory.back();
+      expect(flow.step).toBe("garment_live");
+      expect(getRoute().screen).toBe("scan");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      // 3rd back: gallery, depth 1
+      fakeHistory.back();
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+    });
+
+    test("pressing Retake and Next multiple times in a row never changes the stack depth (always [gallery, scan])", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      for (let i = 0; i < 4; i++) {
+        flow.takeGarmentPhoto();
+        expect(fakeHistory.length).toBe(2);
+        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+        flow.clickNext();
+        expect(fakeHistory.length).toBe(2);
+        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+        fakeHistory.back();
+        expect(fakeHistory.length).toBe(2);
+        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+        flow.clickRetake();
+        expect(flow.step).toBe("garment_live");
+        expect(fakeHistory.length).toBe(2);
+        expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+      }
+    });
+
+    test("3 rapid back presses from garment review end on gallery, never drop below [gallery], and never loop", () => {
+      initNavigation(true);
+      goToScan();
+      const flow = setupScanFlow();
+
+      flow.takeGarmentPhoto();
+      expect(flow.step).toBe("garment_review");
+      expect(fakeHistory.length).toBe(2);
+
+      // Rapid back 1: garment_review -> garment_live
+      fakeHistory.back();
+      expect(flow.step).toBe("garment_live");
+      expect(getRoute().screen).toBe("scan");
+      expect(fakeHistory.length).toBe(2);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery", "scan"]);
+
+      // Rapid back 2: garment_live -> gallery
+      fakeHistory.back();
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
+
+      // Rapid back 3: at gallery, never drops below [gallery] and never loops
+      fakeHistory.back();
+      expect(getRoute().screen).toBe("gallery");
+      expect(fakeHistory.length).toBe(1);
+      expect(fakeHistory.stack.map((s) => s.screen)).toEqual(["gallery"]);
     });
   });
 });
