@@ -108,23 +108,6 @@ export function decideScanBack(step: ScanStep): ScanBackDecision {
   return { action: "leave" };
 }
 
-export function canInterceptScanBack(
-  step: ScanStep | "garment" | "tag"
-): boolean {
-  if (step === "tag") return true;
-  if (step === "garment") return false;
-  return decideScanBack(step).action === "stay";
-}
-
-export function getScanNextStepOnBack(
-  step: ScanStep | "garment" | "tag"
-): ScanStep | "garment" | null {
-  if (step === "tag") return "garment";
-  if (step === "garment") return null;
-  const decision = decideScanBack(step);
-  return decision.action === "stay" ? decision.nextStep : null;
-}
-
 export function getScanStep(options: {
   step: "garment" | "tag";
   hasGarmentImage: boolean;

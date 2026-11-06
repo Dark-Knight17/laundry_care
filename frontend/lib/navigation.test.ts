@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
-  canInterceptScanBack,
   decideScanBack,
   getRoute,
-  getScanNextStepOnBack,
   getScanStep,
   goToDetail,
   goToGallery,
@@ -184,32 +182,22 @@ describe("navigation route rules", () => {
   describe("scan back-press interception rules", () => {
     test("garment review back returns to garment live", () => {
       expect(previousScanStep("garment_review")).toBe("garment_live");
-      expect(canInterceptScanBack("garment_review")).toBe(true);
-      expect(getScanNextStepOnBack("garment_review")).toBe("garment_live");
     });
 
     test("tag live back returns to garment review", () => {
       expect(previousScanStep("tag_live")).toBe("garment_review");
-      expect(canInterceptScanBack("tag_live")).toBe(true);
-      expect(getScanNextStepOnBack("tag_live")).toBe("garment_review");
     });
 
     test("garment live back leaves", () => {
       expect(previousScanStep("garment_live")).toBeNull();
-      expect(canInterceptScanBack("garment_live")).toBe(false);
-      expect(getScanNextStepOnBack("garment_live")).toBeNull();
     });
 
     test("tag scanning back returns to tag live", () => {
       expect(previousScanStep("tag_scanning")).toBe("tag_live");
-      expect(canInterceptScanBack("tag_scanning")).toBe(true);
-      expect(getScanNextStepOnBack("tag_scanning")).toBe("tag_live");
     });
 
     test("tag review back returns to tag live", () => {
       expect(previousScanStep("tag_review")).toBe("tag_live");
-      expect(canInterceptScanBack("tag_review")).toBe(true);
-      expect(getScanNextStepOnBack("tag_review")).toBe("tag_live");
     });
 
     test("getScanStep correctly derives ScanStep from capture state", () => {

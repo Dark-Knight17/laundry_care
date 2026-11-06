@@ -20,6 +20,11 @@ and returns plain-language care instructions.
   display. No auth, no multi-user features yet.
 
 ## Notes
+- Code that runs outside React's render cycle (popstate handlers,
+  timers, event listeners) must read current UI state from a ref that is
+  updated synchronously in the same function that calls the state
+  setter, never from a ref synced inside a useEffect, which lags one
+  render behind and causes stale reads.
 
 ## Code organization principles
 - Single Responsibility: each file should have one clear job. Routes,
