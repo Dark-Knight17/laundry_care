@@ -1,6 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App.tsx";
+import { initDebugHistory } from "./lib/debugHistory.ts";
+
+initDebugHistory();
 
 if ("scrollRestoration" in window.history) {
   window.history.scrollRestoration = "manual";

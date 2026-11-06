@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { addDebugLog, isDebugEnabled } from "./debugHistory.ts";
 
 export type Screen = "auth" | "gallery" | "scan" | "results" | "detail";
 export type Overlay = "account" | "picker" | "delete";
@@ -171,6 +172,10 @@ export function useRoute(): NavigationState {
   return useSyncExternalStore(subscribe, getRoute, getRoute);
 }
 
+export function getCurrentScanStep(): ScanStep | null {
+  return scanBackHandler ? scanBackHandler.getStep() : null;
+}
+
 function handlePopState(event: PopStateEvent) {
   // Invariant: while the user is in the scan flow, the entry on top of
   // the stack is the scan guard, and the entry beneath it is the gallery.
@@ -180,6 +185,12 @@ function handlePopState(event: PopStateEvent) {
       const decision = decideScanBack(currentStep);
 
       if (decision.action === "stay") {
+        if (isDebugEnabled()) {
+          addDebugLog({
+            type: "popstate",
+            details: `state=${JSON.stringify(event.state)}, decision=stay (nextStep=${decision.nextStep})`,
+          });
+        }
         scanBackHandler.onStay(decision.nextStep);
         // ALWAYS restore the guard by pushing the scan entry again
         if (typeof window !== "undefined") {
@@ -189,6 +200,12 @@ function handlePopState(event: PopStateEvent) {
         notify();
         return;
       } else {
+        if (isDebugEnabled()) {
+          addDebugLog({
+            type: "popstate",
+            details: `state=${JSON.stringify(event.state)}, decision=leave`,
+          });
+        }
         // On "leave" it does not push, it switches to the gallery, stops the stream and
         // discards photos, and it never calls history.back() again (the popstate already moved the browser).
         scanBackHandler.onLeave();
@@ -201,6 +218,12 @@ function handlePopState(event: PopStateEvent) {
     if (legacyScanBackInterceptor) {
       const intercepted = legacyScanBackInterceptor();
       if (intercepted) {
+        if (isDebugEnabled()) {
+          addDebugLog({
+            type: "popstate",
+            details: `state=${JSON.stringify(event.state)}, decision=stay (legacy)`,
+          });
+        }
         if (typeof window !== "undefined") {
           window.history.pushState({ app: true, screen: "scan" }, "");
         }
@@ -208,15 +231,34 @@ function handlePopState(event: PopStateEvent) {
         notify();
         return;
       } else {
+        if (isDebugEnabled()) {
+          addDebugLog({
+            type: "popstate",
+            details: `state=${JSON.stringify(event.state)}, decision=leave (legacy)`,
+          });
+        }
         currentRoute = { app: true, screen: "gallery" };
         notify();
         return;
       }
     }
 
+    if (isDebugEnabled()) {
+      addDebugLog({
+        type: "popstate",
+        details: `state=${JSON.stringify(event.state)}, decision=leave (no handler)`,
+      });
+    }
     currentRoute = { app: true, screen: "gallery" };
     notify();
     return;
+  }
+
+  if (isDebugEnabled()) {
+    addDebugLog({
+      type: "popstate",
+      details: `state=${JSON.stringify(event.state)}, decision=n/a (screen=${currentRoute.screen})`,
+    });
   }
 
   const raw = event.state;

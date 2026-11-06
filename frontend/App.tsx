@@ -9,6 +9,7 @@ import { GalleryView } from "./components/GalleryView.tsx";
 import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
 import { IconSheet } from "./components/IconSheet.tsx";
 import { ConfirmDialog } from "./components/ConfirmDialog.tsx";
+import { DebugOverlay } from "./components/DebugOverlay.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
 import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
@@ -269,40 +270,46 @@ export function App() {
 
   if (isAuthLoading) {
     return (
-      <div style={{ padding: "2rem", textAlign: "center" }}>
-        <p>Checking authentication...</p>
-      </div>
+      <>
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <p>Checking authentication...</p>
+        </div>
+        <DebugOverlay />
+      </>
     );
   }
 
   if (!session) {
     return (
-      <div
-        style={{
-          maxWidth: "440px",
-          margin: "0 auto",
-          padding: "3rem var(--spacing-screen-edge)",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-        }}
-      >
-        <h1
+      <>
+        <div
           style={{
-            textAlign: "center",
-            fontFamily: "var(--font-heading)",
-            fontSize: "2.1rem",
-            fontWeight: "normal",
-            color: "var(--color-text)",
-            margin: "0 0 1.5rem 0",
-            letterSpacing: "-0.01em",
+            maxWidth: "440px",
+            margin: "0 auto",
+            padding: "3rem var(--spacing-screen-edge)",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
-          Laundry Tag Scanner
-        </h1>
-        <Auth />
-      </div>
+          <h1
+            style={{
+              textAlign: "center",
+              fontFamily: "var(--font-heading)",
+              fontSize: "2.1rem",
+              fontWeight: "normal",
+              color: "var(--color-text)",
+              margin: "0 0 1.5rem 0",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Laundry Tag Scanner
+          </h1>
+          <Auth />
+        </div>
+        <DebugOverlay />
+      </>
     );
   }
 
@@ -543,6 +550,8 @@ export function App() {
           <span>Scan</span>
         </button>
       )}
+
+      <DebugOverlay />
     </>
   );
 }
