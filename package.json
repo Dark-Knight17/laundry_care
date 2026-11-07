@@ -6,7 +6,7 @@
   "scripts": {
     "icons": "bun scripts/generate-icons.ts",
     "typecheck": "bun check",
-    "build:frontend": "bun build frontend/index.html --outdir frontend/dist --env=inline",
+    "build:frontend": "bun build frontend/index.html --outdir frontend/dist --env=inline && bun scripts/copy-brand.ts",
     "dev:frontend": "bun --hot frontend/index.html"
   },
   "devDependencies": {
