@@ -10,6 +10,7 @@ import { ResultsDisplay } from "./components/ResultsDisplay.tsx";
 import { IconSheet } from "./components/IconSheet.tsx";
 import { ConfirmDialog } from "./components/ConfirmDialog.tsx";
 import { DebugOverlay } from "./components/DebugOverlay.tsx";
+import { LogoMark } from "./components/LogoMark.tsx";
 import { getUserProfile } from "./lib/userProfile.ts";
 import { deleteScan, fetchSavedScans, updateScan, type SavedScan } from "./services/api.ts";
 import { scanSaveService } from "./services/scanSaveService.ts";
@@ -311,6 +312,15 @@ export function App() {
             justifyContent: "center",
           }}
         >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: "1rem",
+            }}
+          >
+            <LogoMark size={56} />
+          </div>
           <h1
             style={{
               textAlign: "center",
@@ -362,7 +372,10 @@ export function App() {
           {route.screen === "gallery" && (
             <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
               <div className="top-bar-inner">
-                <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                  <LogoMark size={28} style={{ flexShrink: 0 }} />
+                  <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
+                </div>
                 <button
                   ref={avatarButtonRef}
                   type="button"
