@@ -372,10 +372,12 @@ export function App() {
           {route.screen === "gallery" && (
             <header className={`top-bar-fixed${isBarHidden ? " top-bar-hidden" : ""}`}>
               <div className="top-bar-inner">
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                  <LogoMark size={28} style={{ flexShrink: 0 }} />
-                  <h1 className="top-bar-wordmark">Laundry Tag Scanner</h1>
-                </div>
+                <LogoMark
+                  size={34}
+                  role="img"
+                  aria-label="Laundry Tag Scanner"
+                  style={{ flexShrink: 0 }}
+                />
                 <button
                   ref={avatarButtonRef}
                   type="button"
@@ -420,6 +422,7 @@ export function App() {
 
           {route.screen === "gallery" && (
             <main style={{ flex: 1 }}>
+              <h1 className="visually-hidden">Laundry Tag Scanner</h1>
               <GalleryView
                 scans={savedScans}
                 isLoading={isScansLoading}

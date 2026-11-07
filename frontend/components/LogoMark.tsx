@@ -9,12 +9,35 @@ interface LogoMarkProps {
   size?: number;
   className?: string;
   style?: React.CSSProperties;
+  role?: string;
+  "aria-label"?: string;
+  ariaLabel?: string;
+  "aria-hidden"?: boolean | "true" | "false";
+  ariaHidden?: boolean | "true" | "false";
 }
 
-export function LogoMark({ size = 28, className, style }: LogoMarkProps) {
+export function LogoMark({
+  size = 28,
+  className,
+  style,
+  role,
+  ariaLabel,
+  "aria-label": ariaLabelAttr,
+  ariaHidden,
+  "aria-hidden": ariaHiddenAttr,
+}: LogoMarkProps) {
   const envVariant = process.env.LOGO_VARIANT;
   const variant: LogoVariant = envVariant === "cloth" ? "cloth" : "tag";
   const elements = MARKS[variant];
+
+  const resolvedAriaLabel = ariaLabelAttr ?? ariaLabel;
+  const rawHidden = ariaHiddenAttr ?? ariaHidden;
+  const resolvedAriaHidden =
+    rawHidden !== undefined
+      ? rawHidden
+      : role || resolvedAriaLabel
+      ? undefined
+      : "true";
 
   return (
     <svg
@@ -23,7 +46,9 @@ export function LogoMark({ size = 28, className, style }: LogoMarkProps) {
       width={size}
       height={size}
       fill="none"
-      aria-hidden="true"
+      role={role}
+      aria-label={resolvedAriaLabel}
+      aria-hidden={resolvedAriaHidden}
       className={className}
       style={style}
     >
