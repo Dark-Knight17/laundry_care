@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { ScanResult } from "../shared/types.ts";
-import { Auth } from "./components/Auth.tsx";
+import { SignIn } from "./components/SignIn.tsx";
+import { SignUp } from "./components/SignUp.tsx";
 import { Avatar } from "./components/Avatar.tsx";
 import { AccountCard } from "./components/AccountCard.tsx";
 import { CaptureFlow } from "./components/CaptureFlow.tsx";
@@ -25,6 +26,8 @@ import {
   goToGallery,
   goToResults,
   goToScan,
+  goToSignIn,
+  goToSignUp,
   initNavigation,
   openOverlay,
   registerResultsStateListener,
@@ -99,12 +102,12 @@ export function App() {
       setSession(currentSession);
       if (currentSession) {
         loadScans(currentSession.access_token);
-        if (event === "SIGNED_IN") {
+        if (event === "SIGNED_IN" || route.screen === "signin" || route.screen === "signup") {
           goToGallery(true);
         }
       } else {
         setSavedScans([]);
-        goToAuth();
+        goToSignIn(true);
       }
     });
 
@@ -334,7 +337,11 @@ export function App() {
           >
             Laundry Tag Scanner
           </h1>
-          <Auth />
+          {route.screen === "signup" ? (
+            <SignUp onNavigateToSignIn={() => window.history.back()} />
+          ) : (
+            <SignIn onNavigateToSignUp={goToSignUp} />
+          )}
         </div>
         <DebugOverlay />
       </>

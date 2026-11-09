@@ -1,7 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { addDebugLog, isDebugEnabled } from "./debugHistory.ts";
 
-export type Screen = "auth" | "gallery" | "scan" | "results" | "detail";
+export type Screen =
+  | "signin"
+  | "signup"
+  | "gallery"
+  | "scan"
+  | "results"
+  | "detail";
 export type Overlay = "account" | "picker" | "delete";
 
 export type ScanStep =
@@ -27,7 +33,7 @@ export function sanitizeRoute(
   hasSession: boolean
 ): NavigationState {
   if (!hasSession) {
-    return { app: true, screen: "auth" };
+    return { app: true, screen: "signin", depth: 0 };
   }
 
   if (
@@ -51,7 +57,11 @@ export function sanitizeRoute(
     return { app: true, screen: "gallery", depth: 0 };
   }
 
-  if (state.screen === "auth") {
+  if (
+    state.screen === "signin" ||
+    state.screen === "signup" ||
+    (state.screen as string) === "auth"
+  ) {
     return { app: true, screen: "gallery", depth: 0 };
   }
 
@@ -80,8 +90,11 @@ export function nextRouteOnBack(
     case "scan":
       return { app: true, screen: "gallery", depth: 0 };
     case "gallery":
-    case "auth":
+    case "signin":
+    case "auth" as Screen:
       return null;
+    case "signup":
+      return { app: true, screen: "signin", depth: 0 };
     default:
       return null;
   }
@@ -476,10 +489,27 @@ export function scanAnotherFromResults() {
   }
 }
 
-export function goToAuth() {
+export function goToSignIn(replace = true) {
   if (typeof window === "undefined") return;
-  const state: NavigationState = { app: true, screen: "auth", depth: 0 };
-  window.history.replaceState(state, "");
+  const state: NavigationState = { app: true, screen: "signin", depth: 0 };
+  if (replace) {
+    window.history.replaceState(state, "");
+  } else {
+    safePushState(state, "");
+  }
+  currentRoute = state;
+  notify();
+}
+export const goToAuth = goToSignIn;
+
+export function goToSignUp() {
+  if (typeof window === "undefined") return;
+  const state: NavigationState = {
+    app: true,
+    screen: "signup",
+    depth: (currentRoute.depth ?? 0) + 1,
+  };
+  safePushState(state, "");
   currentRoute = state;
   notify();
 }

@@ -24,16 +24,25 @@ import {
 
 describe("navigation route rules", () => {
   describe("sanitizeRoute", () => {
-    test("returns auth screen when there is no session", () => {
+    test("returns signin screen when there is no session", () => {
       expect(sanitizeRoute(null, false)).toEqual({
         app: true,
-        screen: "auth",
+        screen: "signin",
+        depth: 0,
       });
       expect(
         sanitizeRoute({ app: true, screen: "gallery" }, false)
       ).toEqual({
         app: true,
-        screen: "auth",
+        screen: "signin",
+        depth: 0,
+      });
+      expect(
+        sanitizeRoute({ app: true, screen: "signup" }, false)
+      ).toEqual({
+        app: true,
+        screen: "signin",
+        depth: 0,
       });
     });
 
@@ -95,8 +104,18 @@ describe("navigation route rules", () => {
       });
     });
 
-    test("replaces auth with gallery if session exists", () => {
-      expect(sanitizeRoute({ app: true, screen: "auth" }, true)).toEqual({
+    test("replaces signin and signup with gallery if session exists", () => {
+      expect(sanitizeRoute({ app: true, screen: "signin" }, true)).toEqual({
+        app: true,
+        screen: "gallery",
+        depth: 0,
+      });
+      expect(sanitizeRoute({ app: true, screen: "signup" }, true)).toEqual({
+        app: true,
+        screen: "gallery",
+        depth: 0,
+      });
+      expect(sanitizeRoute({ app: true, screen: "auth" as any }, true)).toEqual({
         app: true,
         screen: "gallery",
         depth: 0,
@@ -141,9 +160,18 @@ describe("navigation route rules", () => {
       expect(nextRouteOnBack(state)).toBeNull();
     });
 
-    test("auth returns null (exits app / leaves page)", () => {
-      const state: NavigationState = { app: true, screen: "auth" };
+    test("signin returns null (exits app / leaves page)", () => {
+      const state: NavigationState = { app: true, screen: "signin" };
       expect(nextRouteOnBack(state)).toBeNull();
+    });
+
+    test("signup returns signin on back", () => {
+      const state: NavigationState = { app: true, screen: "signup" };
+      expect(nextRouteOnBack(state)).toEqual({
+        app: true,
+        screen: "signin",
+        depth: 0,
+      });
     });
 
     test("overlay returns base screen with overlay removed for account, picker, and delete", () => {
@@ -540,7 +568,7 @@ describe("navigation route rules", () => {
     test("successful sign in replaces auth with gallery so back does not show auth", async () => {
       const { initNavigation, goToGallery, getRoute } = await import("./navigation.ts");
       initNavigation(false);
-      expect(getRoute()).toEqual({ app: true, screen: "auth" });
+      expect(getRoute()).toEqual({ app: true, screen: "signin", depth: 0 });
       expect(mockHistory.stack.length).toBe(1);
 
       goToGallery(true); // replace auth with gallery
