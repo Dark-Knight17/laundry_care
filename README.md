@@ -1,4 +1,4 @@
-# laundry_care
+# Polymer
 
 To install dependencies:
 

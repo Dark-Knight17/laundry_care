@@ -2,7 +2,7 @@ import { SCANS_TABLE, corsHeaders } from "../config.ts";
 import { supabase } from "../services/supabase.ts";
 
 export function handleHealth(): Response {
-  return new Response("Laundry Tag Scanner API running", {
+  return new Response("Polymer API running", {
     headers: { "Content-Type": "text/plain", ...corsHeaders },
   });
 }

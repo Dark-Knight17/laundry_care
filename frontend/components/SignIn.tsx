@@ -46,7 +46,7 @@ export function SignIn({ onNavigateToSignUp }: SignInProps) {
   };
 
   return (
-    <AuthLayout heading="Sign in to Laundry Tag Scanner" error={error}>
+    <AuthLayout heading="Sign in to Polymer" error={error}>
       <form onSubmit={handleSignIn}>
         <div className="auth-field">
           <label htmlFor="signin-email" className="auth-label">

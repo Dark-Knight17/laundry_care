@@ -7,7 +7,7 @@ import { SignUp } from "./SignUp.tsx";
 describe("SignIn screen component", () => {
   test("renders heading, fields, submit button and link to sign-up", () => {
     const html = renderToString(<SignIn onNavigateToSignUp={() => {}} />);
-    expect(html).toContain("Sign in to Laundry Tag Scanner");
+    expect(html).toContain("Sign in to Polymer");
     expect(html).not.toContain("Welcome back");
     expect(html).not.toContain("Enter your email and password to access the scanner.");
     expect(html).toContain('id="signin-email"');

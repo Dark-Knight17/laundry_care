@@ -1,5 +1,5 @@
 ## Project
-Laundry Tag Scanner — a web app that scans garment care tags (ISO 3758 symbols)
+Polymer — a web app that scans garment care tags (ISO 3758 symbols)
 and returns plain-language care instructions.
 
 

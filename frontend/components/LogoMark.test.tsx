@@ -19,16 +19,16 @@ describe("LogoMark", () => {
 
   test("accessibility props provide role and aria-label while overriding default aria-hidden", () => {
     const html = renderToString(
-      <LogoMark size={34} role="img" aria-label="Laundry Tag Scanner" />
+      <LogoMark size={34} role="img" aria-label="Polymer" />
     );
     expect(html).toContain('role="img"');
-    expect(html).toContain('aria-label="Laundry Tag Scanner"');
+    expect(html).toContain('aria-label="Polymer"');
     expect(html).not.toContain('aria-hidden="true"');
   });
 
   test("explicit aria-hidden prop can override default or inferred behavior", () => {
     const html = renderToString(
-      <LogoMark size={34} role="img" aria-label="Laundry Tag Scanner" aria-hidden="true" />
+      <LogoMark size={34} role="img" aria-label="Polymer" aria-hidden="true" />
     );
     expect(html).toContain('aria-hidden="true"');
   });

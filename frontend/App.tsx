@@ -348,7 +348,7 @@ export function App() {
                 <LogoMark
                   size={34}
                   role="img"
-                  aria-label="Laundry Tag Scanner"
+                  aria-label="Polymer"
                   style={{ flexShrink: 0 }}
                 />
                 <button
@@ -395,7 +395,7 @@ export function App() {
 
           {route.screen === "gallery" && (
             <main style={{ flex: 1 }}>
-              <h1 className="visually-hidden">Laundry Tag Scanner</h1>
+              <h1 className="visually-hidden">Polymer</h1>
               <GalleryView
                 scans={savedScans}
                 isLoading={isScansLoading}

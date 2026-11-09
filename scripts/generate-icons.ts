@@ -66,8 +66,8 @@ function buildMaskableIconSvg(size: number = 512): string {
 
 function buildWebManifest(): string {
   const manifest = {
-    name: "Laundry Tag Scanner",
-    short_name: "Laundry Care",
+    name: "Polymer",
+    short_name: "Polymer",
     start_url: "/",
     display: "browser",
     background_color: "#000000",
