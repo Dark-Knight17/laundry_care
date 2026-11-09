@@ -1,5 +1,3 @@
-export type LogoVariant = "tag" | "cloth";
-
 export const BRAND_COLOR = "#34A853";
 export const DEFAULT_STROKE_WIDTH = 3.6;
 export const FAVICON_STROKE_WIDTH = 4.5;
@@ -26,31 +24,11 @@ export const TAG_MARK: MarkElement[] = [
   },
 ];
 
-export const CLOTH_MARK: MarkElement[] = [
-  { type: "path", attrs: { d: "M6 14h52" } },
-  { type: "path", attrs: { d: "M24 10v7M44 10v7" } },
-  {
-    type: "path",
-    attrs: {
-      d: "M18 14l6 24q4-3.5 8 0t8 0t8 0t8-2L50 14",
-    },
-  },
-  { type: "path", attrs: { d: "M5 27h8" } },
-  { type: "path", attrs: { d: "M7 34h7" } },
-];
-
-export const MARKS: Record<LogoVariant, MarkElement[]> = {
-  tag: TAG_MARK,
-  cloth: CLOTH_MARK,
-};
-
 export function renderMarkElementsToString(
-  variant: LogoVariant,
   strokeWidth: number = DEFAULT_STROKE_WIDTH,
   strokeColor: string = BRAND_COLOR
 ): string {
-  const elements = MARKS[variant];
-  return elements
+  return TAG_MARK
     .map((el) => {
       const attrs = Object.entries(el.attrs)
         .map(([k, v]) => `${k}="${v}"`)
@@ -61,7 +39,6 @@ export function renderMarkElementsToString(
 }
 
 export function buildSvgString(
-  variant: LogoVariant,
   options?: {
     strokeWidth?: number;
     color?: string;
@@ -76,7 +53,7 @@ export function buildSvgString(
   const widthAttr = options?.width !== undefined ? ` width="${options.width}"` : "";
   const heightAttr = options?.height !== undefined ? ` height="${options.height}"` : "";
 
-  const inner = renderMarkElementsToString(variant, strokeWidth, color);
+  const inner = renderMarkElementsToString(strokeWidth, color);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"${widthAttr}${heightAttr} fill="none">\n  ${inner}\n</svg>`;
 }

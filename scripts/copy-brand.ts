@@ -2,21 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "..");
+const BRAND_DIR = path.join(REPO_ROOT, "brand", "icons");
 const DIST_DIR = path.join(REPO_ROOT, "frontend", "dist");
 
 function main() {
-  const variant = process.env.LOGO_VARIANT || "tag";
-
-  if (variant !== "tag" && variant !== "cloth") {
-    console.error(
-      `Error: Invalid LOGO_VARIANT="${variant}". Allowed variants are "tag" or "cloth".`
-    );
-    process.exit(1);
-  }
-
-  const brandDir = path.join(REPO_ROOT, "brand", variant);
-  if (!fs.existsSync(brandDir)) {
-    console.error(`Error: Brand directory does not exist: ${brandDir}`);
+  if (!fs.existsSync(BRAND_DIR)) {
+    console.error(`Error: Brand directory does not exist: ${BRAND_DIR}`);
     process.exit(1);
   }
 
@@ -25,13 +16,13 @@ function main() {
   }
 
   // 1. Copy brand files to dist root unhashed
-  const files = fs.readdirSync(brandDir);
+  const files = fs.readdirSync(BRAND_DIR);
   for (const file of files) {
-    const src = path.join(brandDir, file);
+    const src = path.join(BRAND_DIR, file);
     const dest = path.join(DIST_DIR, file);
     fs.copyFileSync(src, dest);
   }
-  console.log(`✓ Copied brand/${variant}/ files to frontend/dist/`);
+  console.log(`✓ Copied brand/icons/ files to frontend/dist/`);
 
   // 2. Inject head tags into dist/index.html
   const distHtmlPath = path.join(DIST_DIR, "index.html");

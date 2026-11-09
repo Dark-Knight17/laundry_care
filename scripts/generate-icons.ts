@@ -6,14 +6,13 @@ import {
   DEFAULT_STROKE_WIDTH,
   FAVICON_STROKE_WIDTH,
   renderMarkElementsToString,
-  type LogoVariant,
 } from "../brand/marks.ts";
 
-const VARIANTS: LogoVariant[] = ["tag", "cloth"];
 const REPO_ROOT = path.resolve(import.meta.dir, "..");
+const OUT_DIR = path.join(REPO_ROOT, "brand", "icons");
 
-function buildFaviconSvg(variant: LogoVariant): string {
-  const mark = renderMarkElementsToString(variant, FAVICON_STROKE_WIDTH, BRAND_COLOR);
+function buildFaviconSvg(): string {
+  const mark = renderMarkElementsToString(FAVICON_STROKE_WIDTH, BRAND_COLOR);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
   <rect width="64" height="64" rx="14" fill="#141414" />
   ${mark}
@@ -21,8 +20,8 @@ function buildFaviconSvg(variant: LogoVariant): string {
 `;
 }
 
-function buildAppleTouchIconSvg(variant: LogoVariant): string {
-  const mark = renderMarkElementsToString(variant, DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+function buildAppleTouchIconSvg(): string {
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
   // Canvas 180x180, mark scaled to 64% of 180 = 115.2px.
   // Offset = (180 - 115.2) / 2 = 32.4px. Scale = 115.2 / 64 = 1.8.
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" fill="none">
@@ -34,8 +33,8 @@ function buildAppleTouchIconSvg(variant: LogoVariant): string {
 `;
 }
 
-function buildRoundedIconSvg(variant: LogoVariant, size: number): string {
-  const mark = renderMarkElementsToString(variant, DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+function buildRoundedIconSvg(size: number): string {
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
   const rx = size * 0.225; // 22.5% of size
   const markSize = size * 0.70; // 70% of tile
   const offset = (size - markSize) / 2;
@@ -50,8 +49,8 @@ function buildRoundedIconSvg(variant: LogoVariant, size: number): string {
 `;
 }
 
-function buildMaskableIconSvg(variant: LogoVariant, size: number = 512): string {
-  const mark = renderMarkElementsToString(variant, DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+function buildMaskableIconSvg(size: number = 512): string {
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
   const markSize = size * 0.56; // 56% safe zone
   const offset = (size - markSize) / 2;
   const scale = markSize / 64;
@@ -98,64 +97,57 @@ function buildWebManifest(): string {
   return JSON.stringify(manifest, null, 2) + "\n";
 }
 
-async function generateVariant(variant: LogoVariant) {
-  const outDir = path.join(REPO_ROOT, "brand", variant);
-  fs.mkdirSync(outDir, { recursive: true });
+async function main() {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  console.log(`Generating icons for variant "${variant}" in ${outDir}...`);
+  console.log(`Generating icons into ${OUT_DIR}...`);
 
   // 1. favicon.svg
-  const faviconSvg = buildFaviconSvg(variant);
-  fs.writeFileSync(path.join(outDir, "favicon.svg"), faviconSvg, "utf-8");
+  const faviconSvg = buildFaviconSvg();
+  fs.writeFileSync(path.join(OUT_DIR, "favicon.svg"), faviconSvg, "utf-8");
 
   // 2. favicon-32.png (32x32)
   await sharp(Buffer.from(faviconSvg))
     .resize(32, 32)
     .png()
-    .toFile(path.join(outDir, "favicon-32.png"));
+    .toFile(path.join(OUT_DIR, "favicon-32.png"));
 
   // 3. apple-touch-icon.png (180x180)
-  const appleSvg = buildAppleTouchIconSvg(variant);
+  const appleSvg = buildAppleTouchIconSvg();
   await sharp(Buffer.from(appleSvg))
     .resize(180, 180)
     .png()
-    .toFile(path.join(outDir, "apple-touch-icon.png"));
+    .toFile(path.join(OUT_DIR, "apple-touch-icon.png"));
 
   // 4. icon-192.png
-  const icon192Svg = buildRoundedIconSvg(variant, 192);
+  const icon192Svg = buildRoundedIconSvg(192);
   await sharp(Buffer.from(icon192Svg))
     .resize(192, 192)
     .png()
-    .toFile(path.join(outDir, "icon-192.png"));
+    .toFile(path.join(OUT_DIR, "icon-192.png"));
 
   // 5. icon-512.png
-  const icon512Svg = buildRoundedIconSvg(variant, 512);
+  const icon512Svg = buildRoundedIconSvg(512);
   await sharp(Buffer.from(icon512Svg))
     .resize(512, 512)
     .png()
-    .toFile(path.join(outDir, "icon-512.png"));
+    .toFile(path.join(OUT_DIR, "icon-512.png"));
 
   // 6. icon-maskable-512.png
-  const maskable512Svg = buildMaskableIconSvg(variant, 512);
+  const maskable512Svg = buildMaskableIconSvg(512);
   await sharp(Buffer.from(maskable512Svg))
     .resize(512, 512)
     .png()
-    .toFile(path.join(outDir, "icon-maskable-512.png"));
+    .toFile(path.join(OUT_DIR, "icon-maskable-512.png"));
 
   // 7. manifest.webmanifest
   fs.writeFileSync(
-    path.join(outDir, "manifest.webmanifest"),
+    path.join(OUT_DIR, "manifest.webmanifest"),
     buildWebManifest(),
     "utf-8"
   );
 
-  console.log(`✓ Completed variant "${variant}"`);
-}
-
-async function main() {
-  for (const variant of VARIANTS) {
-    await generateVariant(variant);
-  }
+  console.log(`✓ Completed icons generation in ${OUT_DIR}`);
 }
 
 main().catch((err) => {

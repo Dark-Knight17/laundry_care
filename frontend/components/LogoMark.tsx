@@ -1,8 +1,7 @@
 import React from "react";
 import {
   DEFAULT_STROKE_WIDTH,
-  MARKS,
-  type LogoVariant,
+  TAG_MARK,
 } from "../../brand/marks.ts";
 
 interface LogoMarkProps {
@@ -26,10 +25,6 @@ export function LogoMark({
   ariaHidden,
   "aria-hidden": ariaHiddenAttr,
 }: LogoMarkProps) {
-  const envVariant = process.env.LOGO_VARIANT;
-  const variant: LogoVariant = envVariant === "cloth" ? "cloth" : "tag";
-  const elements = MARKS[variant];
-
   const resolvedAriaLabel = ariaLabelAttr ?? ariaLabel;
   const rawHidden = ariaHiddenAttr ?? ariaHidden;
   const resolvedAriaHidden =
@@ -52,7 +47,7 @@ export function LogoMark({
       className={className}
       style={style}
     >
-      {elements.map((el, idx) => {
+      {TAG_MARK.map((el, idx) => {
         if (el.type === "rect") {
           return (
             <rect
