@@ -373,14 +373,31 @@ function handlePopState(event: PopStateEvent) {
     return;
   }
 
-  // 6. Other screens: detail, auth, overlays
+  // 6. Other screens: detail, auth/signin, signup, overlays
+  if (
+    sessionActive &&
+    (state.screen === "signin" ||
+      state.screen === "signup" ||
+      (state.screen as string) === "auth")
+  ) {
+    goToGallery(true);
+    return;
+  }
+
   currentRoute = state;
   notify();
+}
+
+let sessionActive = false;
+
+export function setSessionActive(hasSession: boolean) {
+  sessionActive = hasSession;
 }
 
 export function initNavigation(hasSession: boolean) {
   if (typeof window === "undefined") return;
 
+  sessionActive = hasSession;
   installPushStateGuard();
 
   const initial = sanitizeRoute(window.history.state, hasSession);
@@ -396,6 +413,7 @@ export function initNavigation(hasSession: boolean) {
 
 export function goToGallery(replace = false) {
   if (typeof window === "undefined") return;
+  sessionActive = true;
   const state: NavigationState = { app: true, screen: "gallery", depth: 0 };
   if (replace) {
     window.history.replaceState(state, "");
@@ -491,6 +509,7 @@ export function scanAnotherFromResults() {
 
 export function goToSignIn(replace = true) {
   if (typeof window === "undefined") return;
+  sessionActive = false;
   const state: NavigationState = { app: true, screen: "signin", depth: 0 };
   if (replace) {
     window.history.replaceState(state, "");

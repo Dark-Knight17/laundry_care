@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../services/supabaseClient.ts";
+import { authErrorMessage } from "../lib/authErrors.ts";
 
 interface SignUpProps {
   onNavigateToSignIn: () => void;
@@ -72,7 +73,7 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        setError(authErrorMessage(signUpError, "signup"));
       } else if (data?.session) {
         // Session present: handled by onAuthStateChange / navigation
       } else {
@@ -80,9 +81,7 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
         setIsCheckEmail(true);
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Unexpected sign up error";
-      setError(msg);
+      setError(authErrorMessage(err, "signup"));
     } finally {
       setIsLoading(false);
     }

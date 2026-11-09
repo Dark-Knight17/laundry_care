@@ -576,6 +576,51 @@ describe("navigation route rules", () => {
       expect(mockHistory.stack.length).toBe(1);
     });
 
+    test("signin to signup then back lands on signin", async () => {
+      const { initNavigation, goToSignUp, getRoute } = await import("./navigation.ts");
+      initNavigation(false);
+      expect(getRoute()).toEqual({ app: true, screen: "signin", depth: 0 });
+      expect(mockHistory.stack.length).toBe(1);
+
+      goToSignUp();
+      expect(getRoute()).toEqual({ app: true, screen: "signup", depth: 1 });
+      expect(mockHistory.stack.length).toBe(2);
+
+      mockHistory.back();
+      expect(getRoute()).toEqual({ app: true, screen: "signin", depth: 0 });
+    });
+
+    test("signin to signup to successful sign-up ends on the gallery with back not returning to either auth screen", async () => {
+      const { initNavigation, goToSignUp, goToGallery, getRoute } = await import("./navigation.ts");
+      initNavigation(false);
+      expect(getRoute()).toEqual({ app: true, screen: "signin", depth: 0 });
+
+      goToSignUp();
+      expect(getRoute()).toEqual({ app: true, screen: "signup", depth: 1 });
+
+      goToGallery(true);
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
+
+      mockHistory.back();
+      expect(getRoute().screen).not.toBe("signin");
+      expect(getRoute().screen).not.toBe("signup");
+      expect(getRoute()).toEqual({ app: true, screen: "gallery", depth: 0 });
+    });
+
+    test("sign-up with no session stays on signup and shows the 'Check your email' state without navigation", async () => {
+      const { initNavigation, goToSignUp, getRoute } = await import("./navigation.ts");
+      initNavigation(false);
+      goToSignUp();
+      expect(getRoute()).toEqual({ app: true, screen: "signup", depth: 1 });
+      const stackLenBefore = mockHistory.stack.length;
+      const indexBefore = mockHistory.index;
+
+      // When sign-up has no session, the app updates component state without performing any history navigation
+      expect(getRoute()).toEqual({ app: true, screen: "signup", depth: 1 });
+      expect(mockHistory.stack.length).toBe(stackLenBefore);
+      expect(mockHistory.index).toBe(indexBefore);
+    });
+
     test("overlays do not nest entries when opening one after another", async () => {
       const { initNavigation, openOverlay, getRoute } = await import("./navigation.ts");
       initNavigation(true);

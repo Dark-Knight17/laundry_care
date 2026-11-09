@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../services/supabaseClient.ts";
+import { authErrorMessage } from "../lib/authErrors.ts";
 
 interface SignInProps {
   onNavigateToSignUp: () => void;
@@ -16,8 +17,12 @@ export function SignIn({ onNavigateToSignUp }: SignInProps) {
     setError(null);
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
-      setError("Please provide both email and password.");
+    if (!trimmedEmail) {
+      setError("Please provide an email.");
+      return;
+    }
+    if (!password) {
+      setError("Please provide a password.");
       return;
     }
 
@@ -30,12 +35,10 @@ export function SignIn({ onNavigateToSignUp }: SignInProps) {
       });
 
       if (signInError) {
-        setError(signInError.message);
+        setError(authErrorMessage(signInError, "signin"));
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Unexpected sign in error";
-      setError(msg);
+      setError(authErrorMessage(err, "signin"));
     } finally {
       setIsLoading(false);
     }
