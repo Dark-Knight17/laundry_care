@@ -304,45 +304,11 @@ export function App() {
   if (!session) {
     return (
       <>
-        <div
-          style={{
-            maxWidth: "440px",
-            margin: "0 auto",
-            padding: "3rem var(--spacing-screen-edge)",
-            minHeight: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: "1rem",
-            }}
-          >
-            <LogoMark size={56} />
-          </div>
-          <h1
-            style={{
-              textAlign: "center",
-              fontFamily: "var(--font-heading)",
-              fontSize: "2.1rem",
-              fontWeight: "normal",
-              color: "var(--color-text)",
-              margin: "0 0 1.5rem 0",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Laundry Tag Scanner
-          </h1>
-          {route.screen === "signup" ? (
-            <SignUp onNavigateToSignIn={() => window.history.back()} />
-          ) : (
-            <SignIn onNavigateToSignUp={goToSignUp} />
-          )}
-        </div>
+        {route.screen === "signup" ? (
+          <SignUp onNavigateToSignIn={() => window.history.back()} />
+        ) : (
+          <SignIn onNavigateToSignUp={goToSignUp} />
+        )}
         <DebugOverlay />
       </>
     );

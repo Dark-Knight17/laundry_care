@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../services/supabaseClient.ts";
 import { authErrorMessage } from "../lib/authErrors.ts";
+import { AuthLayout } from "./AuthLayout.tsx";
 
 interface SignUpProps {
   onNavigateToSignIn: () => void;
@@ -89,96 +90,29 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
 
   if (isCheckEmail) {
     return (
-      <div
-        style={{
-          maxWidth: "380px",
-          margin: "0 auto 2rem auto",
-          padding: "1.5rem",
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "12px",
-        }}
-      >
-        <h2
-          style={{
-            margin: "0 0 0.5rem 0",
-            fontSize: "1.25rem",
-            fontFamily: "var(--font-heading)",
-            fontWeight: "normal",
-            color: "var(--color-text)",
-          }}
-        >
-          Check your email
-        </h2>
-        <p
-          style={{
-            margin: "0 0 1.25rem 0",
-            color: "var(--color-text)",
-            opacity: 0.85,
-            fontSize: "0.9rem",
-            lineHeight: 1.5,
-          }}
-        >
+      <AuthLayout heading="Check your email">
+        <p className="auth-message">
           If we can create an account for {email}, we've sent a link to confirm
           it. Open it on this device to finish.
         </p>
-        <div>
+        <div className="auth-switch">
           <button
             type="button"
             onClick={onNavigateToSignIn}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--color-accent)",
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              padding: 0,
-              textDecoration: "underline",
-            }}
+            className="auth-switch-btn"
           >
             Back to sign in
           </button>
         </div>
-      </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <div
-      style={{
-        maxWidth: "380px",
-        margin: "0 auto 2rem auto",
-        padding: "1.5rem",
-        backgroundColor: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "12px",
-      }}
-    >
-      <h2
-        style={{
-          margin: "0 0 1.5rem 0",
-          fontSize: "1.25rem",
-          fontFamily: "var(--font-heading)",
-          fontWeight: "normal",
-          color: "var(--color-text)",
-        }}
-      >
-        Create your account
-      </h2>
-
+    <AuthLayout heading="Create your account" error={error}>
       <form onSubmit={handleSignUp}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label
-            htmlFor="signup-first-name"
-            style={{
-              display: "block",
-              marginBottom: "0.3rem",
-              fontWeight: 600,
-              fontSize: "0.82rem",
-              color: "var(--color-text)",
-            }}
-          >
+        <div className="auth-field">
+          <label htmlFor="signup-first-name" className="auth-label">
             First name
           </label>
           <input
@@ -190,30 +124,12 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
             maxLength={50}
             autoComplete="given-name"
             placeholder="Jane"
-            style={{
-              width: "100%",
-              padding: "0.55rem",
-              boxSizing: "border-box",
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "6px",
-              fontSize: "0.9rem",
-            }}
+            className="auth-input"
           />
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
-          <label
-            htmlFor="signup-last-name"
-            style={{
-              display: "block",
-              marginBottom: "0.3rem",
-              fontWeight: 600,
-              fontSize: "0.82rem",
-              color: "var(--color-text)",
-            }}
-          >
+        <div className="auth-field">
+          <label htmlFor="signup-last-name" className="auth-label">
             Last name
           </label>
           <input
@@ -225,30 +141,12 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
             maxLength={50}
             autoComplete="family-name"
             placeholder="Doe"
-            style={{
-              width: "100%",
-              padding: "0.55rem",
-              boxSizing: "border-box",
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "6px",
-              fontSize: "0.9rem",
-            }}
+            className="auth-input"
           />
         </div>
 
-        <div style={{ marginBottom: "1rem" }}>
-          <label
-            htmlFor="signup-email"
-            style={{
-              display: "block",
-              marginBottom: "0.3rem",
-              fontWeight: 600,
-              fontSize: "0.82rem",
-              color: "var(--color-text)",
-            }}
-          >
+        <div className="auth-field">
+          <label htmlFor="signup-email" className="auth-label">
             Email
           </label>
           <input
@@ -261,30 +159,12 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
             autoCapitalize="none"
             spellCheck={false}
             placeholder="you@example.com"
-            style={{
-              width: "100%",
-              padding: "0.55rem",
-              boxSizing: "border-box",
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "6px",
-              fontSize: "0.9rem",
-            }}
+            className="auth-input"
           />
         </div>
 
-        <div style={{ marginBottom: "1.25rem" }}>
-          <label
-            htmlFor="signup-password"
-            style={{
-              display: "block",
-              marginBottom: "0.3rem",
-              fontWeight: 600,
-              fontSize: "0.82rem",
-              color: "var(--color-text)",
-            }}
-          >
+        <div className="auth-field">
+          <label htmlFor="signup-password" className="auth-label">
             Password
           </label>
           <input
@@ -295,96 +175,26 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
             required
             minLength={8}
             autoComplete="new-password"
-            style={{
-              width: "100%",
-              padding: "0.55rem",
-              boxSizing: "border-box",
-              backgroundColor: "var(--color-surface-raised)",
-              color: "var(--color-text)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "6px",
-              fontSize: "0.9rem",
-            }}
+            className="auth-input"
           />
-          <div
-            style={{
-              marginTop: "0.35rem",
-              fontSize: "0.78rem",
-              color: "var(--color-text)",
-              opacity: 0.65,
-            }}
-          >
-            At least 8 characters
-          </div>
+          <div className="auth-hint">At least 8 characters</div>
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: "100%",
-            padding: "0.65rem",
-            backgroundColor: "var(--color-surface-raised)",
-            color: "var(--color-text)",
-            border: "1px solid var(--color-border)",
-            fontWeight: 700,
-            fontSize: "0.95rem",
-            borderRadius: "6px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            transition: "opacity 0.15s ease, border-color 0.15s ease",
-          }}
-        >
+        <button type="submit" disabled={isLoading} className="auth-btn">
           {isLoading ? "Creating account…" : "Create account"}
         </button>
       </form>
 
-      {/* Switch link to sign-in */}
-      <div style={{ textAlign: "center", marginTop: "1rem" }}>
-        <span
-          style={{
-            fontSize: "0.82rem",
-            color: "var(--color-text)",
-            opacity: 0.7,
-          }}
-        >
-          Already have an account?{" "}
-        </span>
+      <div className="auth-switch">
+        <span>Already have an account?</span>
         <button
           type="button"
           onClick={onNavigateToSignIn}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--color-accent)",
-            fontSize: "0.82rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            padding: 0,
-            textDecoration: "underline",
-          }}
+          className="auth-switch-btn"
         >
           Sign in
         </button>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          aria-live="polite"
-          style={{
-            marginTop: "1rem",
-            padding: "0.6rem 0.75rem",
-            backgroundColor: "rgba(177, 74, 62, 0.15)",
-            color: "var(--color-caution)",
-            border: "1px solid var(--color-caution)",
-            borderRadius: "6px",
-            fontSize: "0.85rem",
-            lineHeight: 1.4,
-          }}
-        >
-          {error}
-        </div>
-      )}
-    </div>
+    </AuthLayout>
   );
 }
