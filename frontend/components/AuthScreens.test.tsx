@@ -8,7 +8,7 @@ describe("SignIn screen component", () => {
   test("renders heading, fields, submit button and link to sign-up", () => {
     const html = renderToString(<SignIn onNavigateToSignUp={() => {}} />);
     expect(html).toContain("Welcome back");
-    expect(html).toContain("Enter your email and password to access the scanner.");
+    expect(html).not.toContain("Enter your email and password to access the scanner.");
     expect(html).toContain('id="signin-email"');
     expect(html).toContain('id="signin-password"');
     expect(html).toContain("Sign in");
@@ -21,7 +21,7 @@ describe("SignUp screen component", () => {
   test("renders heading, fields in correct order, hint, submit button and link to sign-in", () => {
     const html = renderToString(<SignUp onNavigateToSignIn={() => {}} />);
     expect(html).toContain("Create your account");
-    expect(html).toContain("It only takes a minute.");
+    expect(html).not.toContain("It only takes a minute.");
     expect(html).toContain('id="signup-first-name"');
     expect(html).toContain('id="signup-last-name"');
     expect(html).toContain('id="signup-email"');

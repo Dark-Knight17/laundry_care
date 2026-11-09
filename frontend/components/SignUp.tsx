@@ -155,29 +155,17 @@ export function SignUp({ onNavigateToSignIn }: SignUpProps) {
         borderRadius: "12px",
       }}
     >
-      <div style={{ marginBottom: "1.25rem" }}>
-        <h2
-          style={{
-            margin: "0 0 0.25rem 0",
-            fontSize: "1.25rem",
-            fontFamily: "var(--font-heading)",
-            fontWeight: "normal",
-            color: "var(--color-text)",
-          }}
-        >
-          Create your account
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            color: "var(--color-text)",
-            opacity: 0.7,
-            fontSize: "0.85rem",
-          }}
-        >
-          It only takes a minute.
-        </p>
-      </div>
+      <h2
+        style={{
+          margin: "0 0 1.5rem 0",
+          fontSize: "1.25rem",
+          fontFamily: "var(--font-heading)",
+          fontWeight: "normal",
+          color: "var(--color-text)",
+        }}
+      >
+        Create your account
+      </h2>
 
       <form onSubmit={handleSignUp}>
         <div style={{ marginBottom: "1rem" }}>

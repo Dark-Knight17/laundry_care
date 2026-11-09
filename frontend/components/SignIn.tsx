@@ -55,29 +55,17 @@ export function SignIn({ onNavigateToSignUp }: SignInProps) {
         borderRadius: "12px",
       }}
     >
-      <div style={{ marginBottom: "1.25rem" }}>
-        <h2
-          style={{
-            margin: "0 0 0.25rem 0",
-            fontSize: "1.25rem",
-            fontFamily: "var(--font-heading)",
-            fontWeight: "normal",
-            color: "var(--color-text)",
-          }}
-        >
-          Welcome back
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            color: "var(--color-text)",
-            opacity: 0.7,
-            fontSize: "0.85rem",
-          }}
-        >
-          Enter your email and password to access the scanner.
-        </p>
-      </div>
+      <h2
+        style={{
+          margin: "0 0 1.5rem 0",
+          fontSize: "1.25rem",
+          fontFamily: "var(--font-heading)",
+          fontWeight: "normal",
+          color: "var(--color-text)",
+        }}
+      >
+        Welcome back
+      </h2>
 
       <form onSubmit={handleSignIn}>
         <div style={{ marginBottom: "1rem" }}>
