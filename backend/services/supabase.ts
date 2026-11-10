@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { GARMENT_PHOTOS_BUCKET, SCANS_TABLE } from "../config.ts";
+import { columnsToColour, type ColourColumns } from "../lib/colourColumns.ts";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
@@ -76,6 +77,7 @@ export async function createScanRecord(scanData: {
   garmentPhotoUrl: string;
   detectedSymbols: any[];
   instructions: string[];
+  colourCols?: ColourColumns;
 }) {
   const { data, error } = await supabase
     .from(SCANS_TABLE)
@@ -84,15 +86,23 @@ export async function createScanRecord(scanData: {
       garment_photo_url: scanData.garmentPhotoUrl,
       detected_symbols: scanData.detectedSymbols,
       instructions: scanData.instructions,
+      colour_id: scanData.colourCols?.colour_id ?? null,
+      colour_pattern: scanData.colourCols?.colour_pattern ?? null,
+      colour_confidence: scanData.colourCols?.colour_confidence ?? null,
     })
-    .select()
+    .select(
+      "id, garment_photo_url, detected_symbols, instructions, created_at, colour_id, colour_pattern, colour_confidence"
+    )
     .single();
 
   if (error) {
     throw new Error(`Failed to insert scan record: ${error.message}`);
   }
 
-  return data;
+  return {
+    ...data,
+    colour: columnsToColour(data),
+  };
 }
 
 /**
@@ -126,31 +136,61 @@ export async function signScanPhotoUrl(scan: any) {
   return scan;
 }
 
+export interface UpdateScanRecordUpdates {
+  detectedSymbols?: any[];
+  instructions?: string[];
+  colourCols?: ColourColumns;
+}
+
 /**
  * Updates a scan record belonging to a user, ensuring strict ownership check.
  */
 export async function updateScanRecord(
   scanId: string,
   userId: string,
-  detectedSymbols: any[],
-  instructions: string[]
+  updatesOrDetected: UpdateScanRecordUpdates | any[],
+  legacyInstructions?: string[]
 ) {
+  const updateData: Record<string, any> = {};
+
+  if (Array.isArray(updatesOrDetected)) {
+    updateData.detected_symbols = updatesOrDetected;
+    if (legacyInstructions !== undefined) {
+      updateData.instructions = legacyInstructions;
+    }
+  } else if (updatesOrDetected && typeof updatesOrDetected === "object") {
+    if (updatesOrDetected.detectedSymbols !== undefined) {
+      updateData.detected_symbols = updatesOrDetected.detectedSymbols;
+    }
+    if (updatesOrDetected.instructions !== undefined) {
+      updateData.instructions = updatesOrDetected.instructions;
+    }
+    if (updatesOrDetected.colourCols !== undefined) {
+      updateData.colour_id = updatesOrDetected.colourCols.colour_id;
+      updateData.colour_pattern = updatesOrDetected.colourCols.colour_pattern;
+      updateData.colour_confidence = updatesOrDetected.colourCols.colour_confidence;
+    }
+  }
+
   const { data, error } = await supabase
     .from(SCANS_TABLE)
-    .update({
-      detected_symbols: detectedSymbols,
-      instructions: instructions,
-    })
+    .update(updateData)
     .eq("id", scanId)
     .eq("user_id", userId)
-    .select("id, garment_photo_url, detected_symbols, instructions, created_at")
+    .select(
+      "id, garment_photo_url, detected_symbols, instructions, created_at, colour_id, colour_pattern, colour_confidence"
+    )
     .single();
 
   if (error || !data) {
     return null;
   }
 
-  return await signScanPhotoUrl(data);
+  const signed = await signScanPhotoUrl(data);
+  return {
+    ...signed,
+    colour: columnsToColour(data),
+  };
 }
 
 /**
@@ -248,7 +288,9 @@ export async function deleteScanRecord(scanId: string, userId: string): Promise<
 export async function listUserScans(userId: string) {
   const { data, error } = await supabase
     .from(SCANS_TABLE)
-    .select("id, garment_photo_url, detected_symbols, instructions, created_at")
+    .select(
+      "id, garment_photo_url, detected_symbols, instructions, created_at, colour_id, colour_pattern, colour_confidence"
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -256,5 +298,13 @@ export async function listUserScans(userId: string) {
     throw new Error(`Failed to list scans: ${error.message}`);
   }
 
-  return await Promise.all((data || []).map(signScanPhotoUrl));
+  return await Promise.all(
+    (data || []).map(async (row) => {
+      const signed = await signScanPhotoUrl(row);
+      return {
+        ...signed,
+        colour: columnsToColour(row),
+      };
+    })
+  );
 }

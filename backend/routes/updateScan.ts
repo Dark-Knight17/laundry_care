@@ -1,8 +1,11 @@
 import { corsHeaders } from "../config.ts";
 import { resolveSymbolIdsToScanResult } from "../lib/resolution.ts";
+import { colourToColumns, type ColourColumns } from "../lib/colourColumns.ts";
 import type { AuthenticatedRequest } from "../middleware/auth.ts";
 import { updateScanRecord } from "../services/supabase.ts";
+import { parseColourInput } from "../../shared/colourParse.ts";
 import { getSymbolById } from "../../shared/symbols.ts";
+import type { DetectedColour, DetectedSymbol } from "../../shared/types.ts";
 
 export async function handleUpdateScan(
   req: AuthenticatedRequest,
@@ -25,13 +28,19 @@ export async function handleUpdateScan(
     });
   }
 
-  const rawSymbolIds = Array.isArray(body)
-    ? body
-    : body?.symbolIds || body?.symbol_ids;
+  const isBodyArray = Array.isArray(body);
+  const isBodyObj = typeof body === "object" && body !== null && !isBodyArray;
 
-  if (!Array.isArray(rawSymbolIds)) {
+  const hasSymbols =
+    isBodyArray ||
+    (isBodyObj && (body.symbolIds !== undefined || body.symbol_ids !== undefined));
+  const hasColour = isBodyObj && "colour" in body;
+
+  if (!hasSymbols && !hasColour) {
     return new Response(
-      JSON.stringify({ error: "Field 'symbolIds' must be an array of strings" }),
+      JSON.stringify({
+        error: "At least one of 'symbolIds' or 'colour' is required",
+      }),
       {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -39,30 +48,77 @@ export async function handleUpdateScan(
     );
   }
 
-  // Validate every symbol id exists in CARE_SYMBOLS; return 400 otherwise
-  for (const id of rawSymbolIds) {
-    if (typeof id !== "string" || !getSymbolById(id)) {
+  let detectedSymbols: DetectedSymbol[] | undefined;
+  let instructions: string[] | undefined;
+
+  if (hasSymbols) {
+    const rawSymbolIds = isBodyArray
+      ? body
+      : body.symbolIds !== undefined
+      ? body.symbolIds
+      : body.symbol_ids;
+
+    if (!Array.isArray(rawSymbolIds)) {
       return new Response(
-        JSON.stringify({ error: `Invalid symbol id: '${id}'` }),
+        JSON.stringify({
+          error: "Field 'symbolIds' must be an array of strings",
+        }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
     }
+
+    // Validate every symbol id exists in CARE_SYMBOLS; return 400 otherwise
+    for (const id of rawSymbolIds) {
+      if (typeof id !== "string" || !getSymbolById(id)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid symbol id: '${id}'` }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+
+    const resolved = resolveSymbolIdsToScanResult(rawSymbolIds);
+    detectedSymbols = resolved.detected;
+    instructions = resolved.instructions;
   }
 
-  // Server rebuilds instructions from shared/symbols.ts using shared resolution function (lib/)
-  const resolved = resolveSymbolIdsToScanResult(rawSymbolIds);
+  let colourCols: ColourColumns | undefined;
+
+  if (hasColour) {
+    if (body.colour === null) {
+      colourCols = colourToColumns(null);
+    } else {
+      const parsedColour = parseColourInput(body.colour);
+      if (!parsedColour) {
+        return new Response(
+          JSON.stringify({ error: "Invalid colour input" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+      const confirmedColour: DetectedColour = {
+        ...parsedColour,
+        confidence: "high",
+      };
+      colourCols = colourToColumns(confirmedColour);
+    }
+  }
 
   try {
     // Ownership: query filtered by both scanId and req.userId; returns null (404) if no match
-    const updated = await updateScanRecord(
-      scanId,
-      req.userId,
-      resolved.detected,
-      resolved.instructions
-    );
+    const updated = await updateScanRecord(scanId, req.userId, {
+      detectedSymbols,
+      instructions,
+      colourCols,
+    });
 
     if (!updated) {
       return new Response(JSON.stringify({ error: "Scan not found" }), {

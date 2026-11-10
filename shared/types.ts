@@ -22,6 +22,7 @@ export interface ScanResult {
   detected: DetectedSymbol[];
   instructions: string[];
   lowConfidenceWarning: boolean;
+  colour?: DetectedColour | null;
 }
 
 export type ColourId =
@@ -90,3 +91,14 @@ export interface ResolvedInstruction {
   text: string;
   adjustedForColour: boolean;
 }
+
+export interface SavedScanRecord {
+  id: string;
+  garment_photo_url: string;
+  detected_symbols: DetectedSymbol[];
+  instructions: string[];
+  created_at: string;
+  colour: DetectedColour | null;
+}
+
+export type SavedScan = SavedScanRecord;

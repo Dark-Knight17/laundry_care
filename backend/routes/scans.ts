@@ -1,10 +1,13 @@
 import { corsHeaders } from "../config.ts";
+import { colourToColumns } from "../lib/colourColumns.ts";
 import type { AuthenticatedRequest } from "../middleware/auth.ts";
 import {
   createScanRecord,
   listUserScans,
   uploadGarmentPhoto,
 } from "../services/supabase.ts";
+import { parseDetectedColour } from "../../shared/colourParse.ts";
+import type { DetectedColour } from "../../shared/types.ts";
 
 export async function handleListScans(
   req: AuthenticatedRequest
@@ -88,6 +91,38 @@ export async function handleCreateScan(
     }
   }
 
+  const rawColour = formData.get("colour");
+  let detectedColour: DetectedColour | null = null;
+  if (rawColour !== null && rawColour !== undefined && rawColour !== "") {
+    let parsedJson: unknown = rawColour;
+    if (typeof rawColour === "string") {
+      try {
+        parsedJson = JSON.parse(rawColour);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Invalid JSON for 'colour'" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    }
+    const validated = parseDetectedColour(parsedJson);
+    if (!validated) {
+      return new Response(
+        JSON.stringify({ error: "Invalid colour value" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+    detectedColour = validated;
+  }
+
+  const colourCols = colourToColumns(detectedColour);
+
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -104,6 +139,7 @@ export async function handleCreateScan(
       garmentPhotoUrl: uploadResult.publicUrl || uploadResult.path,
       detectedSymbols,
       instructions,
+      colourCols,
     });
 
     return new Response(JSON.stringify(scanRecord), {

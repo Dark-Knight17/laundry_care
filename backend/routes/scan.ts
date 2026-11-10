@@ -1,7 +1,8 @@
 import { corsHeaders } from "../config.ts";
-import { resolveScanResult } from "../lib/resolution.ts";
 import type { AuthenticatedRequest } from "../middleware/auth.ts";
-import { detectCareSymbols } from "../services/gemini.ts";
+import { detectCareSymbols, type ImageInput } from "../services/gemini.ts";
+
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function handleScan(
   req: AuthenticatedRequest | Request
@@ -32,13 +33,66 @@ export async function handleScan(
     );
   }
 
+  if (!file.type || !file.type.startsWith("image/")) {
+    return new Response(
+      JSON.stringify({
+        error: "invalid_file",
+        message: "That file isn't a photo. Please retake it.",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
+  if (file.size > MAX_PHOTO_BYTES) {
+    return new Response(
+      JSON.stringify({
+        error: "photo_too_large",
+        message: "That photo is too large to process. Please retake it.",
+      }),
+      { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
+  const garmentFile = formData.get("garmentImage");
+  let garmentImage: ImageInput | undefined;
+
+  if (garmentFile && garmentFile instanceof Blob && garmentFile.size > 0) {
+    if (!garmentFile.type || !garmentFile.type.startsWith("image/")) {
+      return new Response(
+        JSON.stringify({
+          error: "invalid_file",
+          message: "That file isn't a photo. Please retake it.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (garmentFile.size > MAX_PHOTO_BYTES) {
+      return new Response(
+        JSON.stringify({
+          error: "photo_too_large",
+          message: "That photo is too large to process. Please retake it.",
+        }),
+        { status: 413, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const garmentBuffer = await garmentFile.arrayBuffer();
+    garmentImage = {
+      base64Data: Buffer.from(garmentBuffer).toString("base64"),
+      mimeType: garmentFile.type,
+    };
+  }
+
   try {
     const arrayBuffer = await file.arrayBuffer();
     const base64Data = Buffer.from(arrayBuffer).toString("base64");
     const mimeType = file.type || "image/jpeg";
 
-    const detected = await detectCareSymbols({ base64Data, mimeType });
-    const scanResult = resolveScanResult(detected);
+    const scanResult = await detectCareSymbols({
+      tagImage: { base64Data, mimeType },
+      garmentImage,
+    });
 
     return new Response(JSON.stringify(scanResult), {
       status: 200,
@@ -52,7 +106,7 @@ export async function handleScan(
       );
     }
 
-    console.error("Gemini API call failed:", error);
+    console.error("Gemini API call failed:", error?.status || error?.message);
     const isUnavailable =
       error?.status === 503 || error?.message?.includes("high demand");
 
