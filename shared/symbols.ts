@@ -7,7 +7,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "wash",
     label: "30°C normal",
     instruction:
-      "You can wash this in a washing machine using cool water (up to 30°C) on a regular wash setting.",
+      "You can wash this in a washing machine with cool water (up to 30°C) on a regular wash setting. Use your normal detergent.",
     iconDescription:
       "A wash tub basin outline with a wavy water line across the top and the number '30' written in the center.",
   },
@@ -16,7 +16,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "wash",
     label: "40°C normal",
     instruction:
-      "Wash this in a washing machine with warm water (up to 40°C) on a regular wash setting.",
+      "Wash this in a washing machine with warm water (up to 40°C) on a regular wash setting. Use your normal detergent.",
     iconDescription:
       "A wash tub basin outline with a wavy water line across the top and the number '40' written in the center.",
   },
@@ -25,7 +25,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "wash",
     label: "40°C gentle",
     instruction:
-      "Wash this in a washing machine with warm water (up to 40°C), but use a soft wash setting to protect the fabric.",
+      "Wash this in a washing machine with warm water (up to 40°C), but use a soft wash setting to protect the fabric. Use a small amount of mild detergent.",
     iconDescription:
       "A wash tub basin outline with a wavy water line, the number '40' in the center, and a single horizontal bar directly underneath the tub.",
   },
@@ -34,7 +34,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "wash",
     label: "Hand wash only",
     instruction:
-      "Wash this by hand in a basin or sink with lukewarm water (up to 40°C). Don't put it in a washing machine.",
+      "Wash this by hand in a basin with lukewarm water (up to 40°C). Use a small amount of mild detergent and don't scrub hard. Don't put it in a washing machine.",
     iconDescription:
       "A wash tub basin outline with a wavy water surface and an open hand reaching down into the water.",
   },
@@ -54,7 +54,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "bleach",
     label: "Any bleach allowed",
     instruction:
-      "You can safely use any kind of bleach on this if you need to remove stains or brighten it.",
+      "You can use bleach on this to remove stains or make it whiter. Mix a little in plenty of water first, never pour it straight on the cloth, and rinse well afterwards.",
     iconDescription: "A hollow equilateral triangle outline with nothing inside.",
   },
   {
@@ -62,7 +62,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "bleach",
     label: "Non-chlorine bleach only",
     instruction:
-      "Only use color-safe or non-chlorine bleach when needed. Avoid regular chlorine bleach because it can damage or discolor the fabric.",
+      "Only use colour-safe bleach on this. Regular bleach can damage or fade the fabric.",
     iconDescription:
       "An equilateral triangle outline with two parallel diagonal lines slanting upward from bottom-left toward top-right inside.",
   },
@@ -71,7 +71,7 @@ export const CARE_SYMBOLS: CareSymbol[] = [
     category: "bleach",
     label: "Do not bleach",
     instruction:
-      "Don't use any bleach on this, as it will damage the material or ruin the color.",
+      "Don't use any bleach on this. It will damage the material or ruin the colour.",
     iconDescription:
       "An equilateral triangle outline crossed out with a large 'X'.",
   },
