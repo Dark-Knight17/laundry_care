@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import {
-  BRAND_COLOR,
+  BRAND_GREEN,
   DEFAULT_STROKE_WIDTH,
   FAVICON_STROKE_WIDTH,
   renderMarkElementsToString,
@@ -12,7 +12,7 @@ const REPO_ROOT = path.resolve(import.meta.dir, "..");
 const OUT_DIR = path.join(REPO_ROOT, "brand", "icons");
 
 function buildFaviconSvg(): string {
-  const mark = renderMarkElementsToString(FAVICON_STROKE_WIDTH, BRAND_COLOR);
+  const mark = renderMarkElementsToString(FAVICON_STROKE_WIDTH, BRAND_GREEN);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
   <rect width="64" height="64" rx="14" fill="#141414" />
   ${mark}
@@ -21,7 +21,7 @@ function buildFaviconSvg(): string {
 }
 
 function buildAppleTouchIconSvg(): string {
-  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_GREEN);
   // Canvas 180x180, mark scaled to 64% of 180 = 115.2px.
   // Offset = (180 - 115.2) / 2 = 32.4px. Scale = 115.2 / 64 = 1.8.
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" fill="none">
@@ -34,7 +34,7 @@ function buildAppleTouchIconSvg(): string {
 }
 
 function buildRoundedIconSvg(size: number): string {
-  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_GREEN);
   const rx = size * 0.225; // 22.5% of size
   const markSize = size * 0.70; // 70% of tile
   const offset = (size - markSize) / 2;
@@ -50,7 +50,7 @@ function buildRoundedIconSvg(size: number): string {
 }
 
 function buildMaskableIconSvg(size: number = 512): string {
-  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_COLOR);
+  const mark = renderMarkElementsToString(DEFAULT_STROKE_WIDTH, BRAND_GREEN);
   const markSize = size * 0.56; // 56% safe zone
   const offset = (size - markSize) / 2;
   const scale = markSize / 64;

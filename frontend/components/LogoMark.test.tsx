@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToString } from "react-dom/server";
+import { BRAND_GREEN } from "../../brand/marks.ts";
 import { LogoMark } from "./LogoMark.tsx";
 
 describe("LogoMark", () => {
@@ -31,5 +34,16 @@ describe("LogoMark", () => {
       <LogoMark size={34} role="img" aria-label="Polymer" aria-hidden="true" />
     );
     expect(html).toContain('aria-hidden="true"');
+  });
+});
+
+describe("Brand green consistency", () => {
+  test("--color-brand in styles.css matches BRAND_GREEN in marks.ts", () => {
+    const cssPath = path.resolve(import.meta.dir, "../styles.css");
+    const cssContent = fs.readFileSync(cssPath, "utf-8");
+    const match = cssContent.match(/--color-brand:\s*([^;]+);/);
+    expect(match).not.toBeNull();
+    const brandValue = match?.[1]?.trim().toUpperCase();
+    expect(brandValue).toBe(BRAND_GREEN.toUpperCase());
   });
 });

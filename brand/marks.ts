@@ -1,4 +1,4 @@
-export const BRAND_COLOR = "#34A853";
+export const BRAND_GREEN = "#1ED760";
 export const DEFAULT_STROKE_WIDTH = 3.6;
 export const FAVICON_STROKE_WIDTH = 4.5;
 
@@ -26,7 +26,7 @@ export const TAG_MARK: MarkElement[] = [
 
 export function renderMarkElementsToString(
   strokeWidth: number = DEFAULT_STROKE_WIDTH,
-  strokeColor: string = BRAND_COLOR
+  strokeColor: string = BRAND_GREEN
 ): string {
   return TAG_MARK
     .map((el) => {
@@ -48,7 +48,7 @@ export function buildSvgString(
   }
 ): string {
   const strokeWidth = options?.strokeWidth ?? DEFAULT_STROKE_WIDTH;
-  const color = options?.color ?? BRAND_COLOR;
+  const color = options?.color ?? BRAND_GREEN;
   const viewBox = options?.viewBox ?? "0 0 64 64";
   const widthAttr = options?.width !== undefined ? ` width="${options.width}"` : "";
   const heightAttr = options?.height !== undefined ? ` height="${options.height}"` : "";
