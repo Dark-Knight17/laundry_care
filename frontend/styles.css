@@ -4,7 +4,7 @@
   --color-surface: #141414;
   --color-surface-raised: #1C1C1C;
   --color-border: #2A2A2A;
-  --color-accent: #8A96CC;
+  --color-accent: var(--color-brand);
   --color-accent-secondary: #E0B864;
   --color-brand: #1ED760;
   --color-text: #D4D4D4;

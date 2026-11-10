@@ -46,4 +46,13 @@ describe("Brand green consistency", () => {
     const brandValue = match?.[1]?.trim().toUpperCase();
     expect(brandValue).toBe(BRAND_GREEN.toUpperCase());
   });
+
+  test("--color-accent in styles.css is defined as var(--color-brand)", () => {
+    const cssPath = path.resolve(import.meta.dir, "../styles.css");
+    const cssContent = fs.readFileSync(cssPath, "utf-8");
+    const match = cssContent.match(/--color-accent:\s*([^;]+);/);
+    expect(match).not.toBeNull();
+    const accentValue = match?.[1]?.trim();
+    expect(accentValue).toBe("var(--color-brand)");
+  });
 });

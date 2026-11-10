@@ -202,7 +202,7 @@ export function ResultsDisplay({
               padding: "0.4rem 0.8rem",
               backgroundColor: "var(--color-surface)",
               color: "var(--color-accent)",
-              border: "1px solid rgba(124, 143, 224, 0.3)",
+              border: "1px solid var(--color-border)",
               borderRadius: "6px",
               cursor: "pointer",
             }}
