@@ -8,7 +8,7 @@ export type Screen =
   | "scan"
   | "results"
   | "detail";
-export type Overlay = "account" | "picker" | "delete";
+export type Overlay = "account" | "picker" | "delete" | "colour";
 
 export type ScanStep =
   | "garment_live"

@@ -8,13 +8,30 @@ import type {
   CareSymbol,
   ColourInput,
   DetectedColour,
+  GarmentPattern,
 } from "../../shared/types.ts";
 import { getSymbolById } from "../../shared/symbols.ts";
-import { resolveInstructions } from "../../shared/colourCare.ts";
-import { confirmedColour } from "../lib/colourView.ts";
+import { buildColourCare, resolveInstructions } from "../../shared/colourCare.ts";
+import { getColourById } from "../../shared/colours.ts";
+import { colourViewState, confirmedColour } from "../lib/colourView.ts";
 import { updateScan } from "../services/api.ts";
+import {
+  GarmentColourSheet,
+  MULTICOLOUR_GRADIENT,
+} from "./GarmentColourSheet.tsx";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
 import { SymbolIcon } from "./SymbolIcon.tsx";
+
+function formatPattern(pattern: GarmentPattern): string {
+  switch (pattern) {
+    case "solid":
+      return "Plain";
+    case "patterned":
+      return "Patterned";
+    case "graphic_print":
+      return "Print or logo";
+  }
+}
 
 interface ResultsDisplayProps {
   result: ScanResult;
@@ -123,6 +140,11 @@ export function ResultsDisplay({
   const symbolIds = (result.detected || []).map((d) =>
     typeof d === "string" ? d : d.symbolId
   );
+
+  const colourState = colourViewState({
+    colour: result.colour,
+    symbolIds,
+  });
 
   const resolved = resolveInstructions({
     symbolIds,
@@ -257,7 +279,7 @@ export function ResultsDisplay({
       )}
 
       {onUpdateResult && (
-        <div style={{ marginBottom: hasBottomBar ? "1.25rem" : 0 }}>
+        <div style={{ marginBottom: "1.25rem" }}>
           <button
             type="button"
             onClick={() => openOverlay("picker")}
@@ -274,6 +296,134 @@ export function ResultsDisplay({
           </button>
         </div>
       )}
+
+      {/* Colour care section */}
+      {colourState === "missing" && (
+        <div className="colour-care-section">
+          <div className="colour-care-missing">
+            <p className="colour-care-missing-text">
+              Add this garment's colour for colour care tips.
+            </p>
+            <button
+              type="button"
+              onClick={() => openOverlay("colour")}
+              className="colour-care-pill-btn colour-care-pill-btn-ghost"
+            >
+              Choose colour
+            </button>
+          </div>
+        </div>
+      )}
+
+      {colourState === "confirm" && result.colour && (
+        <div className="colour-care-section">
+          <div className="colour-care-confirm">
+            <p className="colour-care-confirm-question">
+              {`Is this garment ${(
+                getColourById(result.colour.colourId)?.label ??
+                result.colour.colourId
+              ).toLowerCase()}?`}
+            </p>
+            <div className="colour-care-confirm-actions">
+              <button
+                type="button"
+                onClick={() =>
+                  handleConfirmOrChangeColour({
+                    colourId: result.colour!.colourId,
+                    pattern: result.colour!.pattern,
+                  })
+                }
+                className="colour-care-pill-btn colour-care-pill-btn-tonal"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => openOverlay("colour")}
+                className="colour-care-pill-btn colour-care-pill-btn-ghost"
+              >
+                No, choose another
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {colourState === "ready" && (() => {
+        const confirmed = confirmedColour(result.colour);
+        if (!confirmed) return null;
+        const colourInfo = getColourById(confirmed.colourId);
+        const care = buildColourCare({ colour: confirmed, symbolIds });
+        if (!care) return null;
+
+        const isMulticolour = confirmed.colourId === "multicolour";
+
+        return (
+          <div className="colour-care-section">
+            <div className="colour-care-ready-header">
+              <div className="colour-care-ready-summary">
+                <span
+                  className="colour-care-dot"
+                  style={
+                    isMulticolour
+                      ? { background: MULTICOLOUR_GRADIENT }
+                      : { backgroundColor: colourInfo?.hex ?? "#ffffff" }
+                  }
+                />
+                <span className="colour-care-ready-title">
+                  {`${colourInfo?.label ?? confirmed.colourId} · ${formatPattern(confirmed.pattern)}`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => openOverlay("colour")}
+                className="colour-care-change-btn"
+              >
+                Change
+              </button>
+            </div>
+
+            <div className="colour-care-item">
+              <div className="colour-care-label">Inside out</div>
+              <div className="colour-care-text">{care.insideOut.text}</div>
+            </div>
+
+            <div className="colour-care-item">
+              <div className="colour-care-label">Wash with</div>
+              <div className="colour-care-text">{care.washWith.text}</div>
+              {care.washWith.examples.length > 0 && (
+                <div className="colour-care-chips">
+                  {care.washWith.examples.map((example) => (
+                    <span key={example.name} className="colour-care-chip">
+                      {example.hex && (
+                        <span
+                          className="colour-care-chip-dot"
+                          style={{ backgroundColor: example.hex }}
+                        />
+                      )}
+                      <span>{example.name}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {care.drying !== null && (
+              <div className="colour-care-item">
+                <div className="colour-care-label">Drying</div>
+                <div className="colour-care-text">{care.drying.text}</div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      <GarmentColourSheet
+        open={route.overlay === "colour"}
+        initialColour={result.colour}
+        onApply={handleConfirmOrChangeColour}
+        onClose={closeOverlay}
+      />
 
       {/* Quiet status line for background auto-save */}
       {saveState && (
