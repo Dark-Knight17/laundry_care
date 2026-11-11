@@ -6,7 +6,8 @@ import {
   registerScanFlowListener,
   type ScanStep,
 } from "../lib/navigation.ts";
-import { scanCareTag } from "../services/api.ts";
+import { hasUploadErrorCode, sanitizeErrorMessage } from "../lib/uploadErrors.ts";
+import { ApiError, scanCareTag } from "../services/api.ts";
 
 export type CaptureStep = "garment" | "tag";
 
@@ -294,8 +295,15 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
       }
       console.error("Scan request failed:", fetchErr);
       const message =
-        fetchErr instanceof Error ? fetchErr.message : "Failed to scan care tag";
-      setError(`Scan error: ${message}`);
+        fetchErr instanceof ApiError &&
+        (fetchErr.status === 413 ||
+          fetchErr.status === 400 ||
+          hasUploadErrorCode(fetchErr.body))
+          ? fetchErr.message
+          : `Scan error: ${sanitizeErrorMessage(
+              fetchErr instanceof Error ? fetchErr.message : "Failed to scan care tag"
+            )}`;
+      setError(message);
       URL.revokeObjectURL(url);
       tagBlobRef.current = null;
       tagImageUrlRef.current = null;

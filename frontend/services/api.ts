@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../config.ts";
 import { supabase } from "./supabaseClient.ts";
 import type { ScanResult } from "../../shared/types.ts";
+import { uploadErrorMessage } from "../lib/uploadErrors.ts";
 
 export interface SavedScan {
   id: string;
@@ -8,6 +9,30 @@ export interface SavedScan {
   detected_symbols?: any[];
   instructions: string[];
   created_at: string;
+}
+
+export class ApiError extends Error {
+  status: number;
+  body?: unknown;
+
+  constructor(message: string, status: number, body?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+async function parseResponseBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    try {
+      return await response.text();
+    } catch {
+      return undefined;
+    }
+  }
 }
 
 export async function scanCareTag(
@@ -37,16 +62,9 @@ export async function scanCareTag(
   });
 
   if (!response.ok) {
-    let errorMsg = `Server error (${response.status})`;
-    try {
-      const errJson = await response.json();
-      if (errJson && typeof errJson.error === "string") {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errorMsg);
+    const body = await parseResponseBody(response);
+    const errorMsg = uploadErrorMessage(response.status, body);
+    throw new ApiError(errorMsg, response.status, body);
   }
 
   const result: ScanResult = await response.json();
@@ -81,16 +99,9 @@ export async function saveScan(
   });
 
   if (!response.ok) {
-    let errorMsg = `Server error (${response.status})`;
-    try {
-      const errJson = await response.json();
-      if (errJson && typeof errJson.error === "string") {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errorMsg);
+    const body = await parseResponseBody(response);
+    const errorMsg = uploadErrorMessage(response.status, body);
+    throw new ApiError(errorMsg, response.status, body);
   }
 
   return await response.json();
@@ -121,16 +132,9 @@ export async function updateScan(
   });
 
   if (!response.ok) {
-    let errorMsg = `Server error (${response.status})`;
-    try {
-      const errJson = await response.json();
-      if (errJson && typeof errJson.error === "string") {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errorMsg);
+    const body = await parseResponseBody(response);
+    const errorMsg = uploadErrorMessage(response.status, body);
+    throw new ApiError(errorMsg, response.status, body);
   }
 
   return await response.json();
@@ -157,16 +161,9 @@ export async function deleteScan(
   });
 
   if (!response.ok) {
-    let errorMsg = `Server error (${response.status})`;
-    try {
-      const errJson = await response.json();
-      if (errJson && typeof errJson.error === "string") {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errorMsg);
+    const body = await parseResponseBody(response);
+    const errorMsg = uploadErrorMessage(response.status, body);
+    throw new ApiError(errorMsg, response.status, body);
   }
 }
 
@@ -188,16 +185,9 @@ export async function fetchSavedScans(accessToken?: string): Promise<SavedScan[]
   });
 
   if (!response.ok) {
-    let errorMsg = `Server error (${response.status})`;
-    try {
-      const errJson = await response.json();
-      if (errJson && typeof errJson.error === "string") {
-        errorMsg = errJson.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(errorMsg);
+    const body = await parseResponseBody(response);
+    const errorMsg = uploadErrorMessage(response.status, body);
+    throw new ApiError(errorMsg, response.status, body);
   }
 
   return await response.json();
