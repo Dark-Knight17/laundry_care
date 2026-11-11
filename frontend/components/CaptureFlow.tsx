@@ -272,7 +272,12 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
     abortControllerRef.current = controller;
 
     try {
-      const result = await scanCareTag(blob, undefined, controller.signal);
+      const result = await scanCareTag(
+        blob,
+        garmentBlobRef.current,
+        undefined,
+        controller.signal
+      );
       if (controller.signal.aborted) {
         return;
       }

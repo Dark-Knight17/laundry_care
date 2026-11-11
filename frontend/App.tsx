@@ -488,18 +488,32 @@ export function App() {
                   detected: activeDetailScan.detected_symbols || [],
                   instructions: activeDetailScan.instructions || [],
                   lowConfidenceWarning: false,
+                  colour: activeDetailScan.colour ?? null,
                 }}
-                onUpdateResult={async (updated) => {
-                  const symbolIds = updated.detected.map((d) => d.symbolId);
-                  try {
-                    const refreshed = await updateScan(activeDetailScan.id, symbolIds);
-                    setSelectedSavedScan(refreshed);
-                    setSavedScans((prev) =>
-                      prev.map((s) => (s.id === refreshed.id ? refreshed : s))
-                    );
-                  } catch (err) {
-                    console.error("Failed to update saved garment:", err);
-                  }
+                savedScanId={activeDetailScan.id}
+                onUpdateResult={(updated) => {
+                  setSelectedSavedScan((prev) =>
+                    prev && prev.id === activeDetailScan.id
+                      ? {
+                          ...prev,
+                          detected_symbols: updated.detected,
+                          instructions: updated.instructions,
+                          colour: updated.colour ?? null,
+                        }
+                      : prev
+                  );
+                  setSavedScans((prev) =>
+                    prev.map((s) =>
+                      s.id === activeDetailScan.id
+                        ? {
+                            ...s,
+                            detected_symbols: updated.detected,
+                            instructions: updated.instructions,
+                            colour: updated.colour ?? null,
+                          }
+                        : s
+                    )
+                  );
                 }}
               />
 

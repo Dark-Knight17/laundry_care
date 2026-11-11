@@ -1,14 +1,18 @@
 import { API_BASE_URL } from "../config.ts";
 import { supabase } from "./supabaseClient.ts";
-import type { ScanResult } from "../../shared/types.ts";
+import { parseDetectedColour } from "../../shared/colourParse.ts";
+import type {
+  ColourInput,
+  SavedScan,
+  ScanResult,
+} from "../../shared/types.ts";
 import { uploadErrorMessage } from "../lib/uploadErrors.ts";
 
-export interface SavedScan {
-  id: string;
-  garment_photo_url: string;
-  detected_symbols?: any[];
-  instructions: string[];
-  created_at: string;
+export type { SavedScan } from "../../shared/types.ts";
+
+export interface UpdateScanPayload {
+  symbolIds?: string[];
+  colour?: ColourInput | null;
 }
 
 export class ApiError extends Error {
@@ -37,11 +41,15 @@ async function parseResponseBody(response: Response): Promise<unknown> {
 
 export async function scanCareTag(
   imageBlob: Blob,
+  garmentImageBlob?: Blob | null,
   accessToken?: string,
   signal?: AbortSignal
 ): Promise<ScanResult> {
   const formData = new FormData();
   formData.append("image", imageBlob, "tag.jpg");
+  if (garmentImageBlob) {
+    formData.append("garmentImage", garmentImageBlob, "garment.jpg");
+  }
 
   let token = accessToken;
   if (!token) {
@@ -68,6 +76,8 @@ export async function scanCareTag(
   }
 
   const result: ScanResult = await response.json();
+  // Treat any colour from the API that fails parseDetectedColour as null
+  result.colour = parseDetectedColour(result.colour);
   return result;
 }
 
@@ -80,6 +90,9 @@ export async function saveScan(
   formData.append("garmentPhoto", garmentBlob, "garment.jpg");
   formData.append("detectedSymbols", JSON.stringify(scanResult.detected));
   formData.append("instructions", JSON.stringify(scanResult.instructions));
+  if (scanResult.colour) {
+    formData.append("colour", JSON.stringify(scanResult.colour));
+  }
 
   let token = accessToken;
   if (!token) {
@@ -109,7 +122,7 @@ export async function saveScan(
 
 export async function updateScan(
   scanId: string,
-  symbolIds: string[],
+  payload: string[] | UpdateScanPayload,
   accessToken?: string
 ): Promise<SavedScan> {
   let token = accessToken;
@@ -125,10 +138,12 @@ export async function updateScan(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const body = Array.isArray(payload) ? { symbolIds: payload } : payload;
+
   const response = await fetch(`${API_BASE_URL}/scans/${scanId}`, {
     method: "PATCH",
     headers,
-    body: JSON.stringify({ symbolIds }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

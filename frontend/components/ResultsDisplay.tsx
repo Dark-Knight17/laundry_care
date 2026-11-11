@@ -3,22 +3,23 @@ import { MONOSPACE_FONT } from "../config.ts";
 import { resolveSymbolsToScanResult } from "../lib/resolution.ts";
 import { closeOverlay, openOverlay, useRoute } from "../lib/navigation.ts";
 import { scanSaveService, type ActiveSaveState } from "../services/scanSaveService.ts";
-import type { ScanResult, CareSymbol } from "../../shared/types.ts";
+import type {
+  ScanResult,
+  CareSymbol,
+  ColourInput,
+  DetectedColour,
+} from "../../shared/types.ts";
 import { getSymbolById } from "../../shared/symbols.ts";
+import { resolveInstructions } from "../../shared/colourCare.ts";
+import { confirmedColour } from "../lib/colourView.ts";
+import { updateScan } from "../services/api.ts";
 import { ManualSymbolPicker } from "./ManualSymbolPicker.tsx";
 import { SymbolIcon } from "./SymbolIcon.tsx";
-
-const CATEGORY_ORDER: Record<string, number> = {
-  wash: 0,
-  bleach: 1,
-  dry: 2,
-  iron: 3,
-  professional_care: 4,
-};
 
 interface ResultsDisplayProps {
   result: ScanResult;
   scanSessionId?: string;
+  savedScanId?: string;
   onDone?: () => void;
   onScanAnother?: () => void;
   onUpdateResult?: (updated: ScanResult) => void;
@@ -27,6 +28,7 @@ interface ResultsDisplayProps {
 export function ResultsDisplay({
   result,
   scanSessionId,
+  savedScanId,
   onDone,
   onScanAnother,
   onUpdateResult,
@@ -48,12 +50,58 @@ export function ResultsDisplay({
   const handleApplyManual = async (selectedIds: string[]) => {
     closeOverlay();
     const updated = resolveSymbolsToScanResult(selectedIds);
+    const updatedWithColour: ScanResult = {
+      ...updated,
+      colour: result.colour,
+    };
     if (onUpdateResult) {
-      onUpdateResult(updated);
+      onUpdateResult(updatedWithColour);
     }
 
-    if (scanSessionId) {
-      await scanSaveService.applyManualCorrections(scanSessionId, updated);
+    if (savedScanId) {
+      try {
+        const refreshed = await updateScan(savedScanId, { symbolIds: selectedIds });
+        onUpdateResult?.({
+          ...updatedWithColour,
+          detected: refreshed.detected_symbols,
+          instructions: refreshed.instructions,
+          colour: refreshed.colour,
+        });
+      } catch (err) {
+        console.error("Failed to update saved scan symbols:", err);
+      }
+    } else if (scanSessionId) {
+      await scanSaveService.applyManualCorrections(scanSessionId, updatedWithColour);
+    }
+  };
+
+  const handleConfirmOrChangeColour = async (colourInput: ColourInput) => {
+    const confirmed: DetectedColour = {
+      ...colourInput,
+      confidence: "high",
+    };
+    const updatedWithColour: ScanResult = {
+      ...result,
+      colour: confirmed,
+    };
+    if (onUpdateResult) {
+      onUpdateResult(updatedWithColour);
+    }
+
+    if (savedScanId) {
+      try {
+        const refreshed = await updateScan(savedScanId, { colour: colourInput });
+        onUpdateResult?.({
+          ...updatedWithColour,
+          detected: refreshed.detected_symbols,
+          instructions: refreshed.instructions,
+          colour: refreshed.colour,
+        });
+      } catch (err) {
+        console.error("Failed to update saved scan colour:", err);
+      }
+    } else if (scanSessionId) {
+      await scanSaveService.applyColourCorrection(scanSessionId, confirmed);
     }
   };
 
@@ -63,28 +111,43 @@ export function ResultsDisplay({
     }
   };
 
-  interface DetectedRow {
-    symbol: CareSymbol;
-    confidence?: "high" | "medium" | "low";
-  }
-
-  const rows: DetectedRow[] = [];
+  const confidenceMap = new Map<string, "high" | "medium" | "low" | undefined>();
   for (const item of (result.detected || [])) {
     const symbolId = typeof item === "string" ? item : item?.symbolId;
     const confidence = typeof item === "string" ? undefined : item?.confidence;
-    const symbol = getSymbolById(symbolId);
-    if (!symbol) {
-      console.warn(`ResultsDisplay: symbolId not found "${symbolId}"`);
-      continue;
+    if (symbolId) {
+      confidenceMap.set(symbolId, confidence);
     }
-    rows.push({ symbol, confidence });
   }
 
-  rows.sort((a, b) => {
-    const orderA = CATEGORY_ORDER[a.symbol.category] ?? 99;
-    const orderB = CATEGORY_ORDER[b.symbol.category] ?? 99;
-    return orderA - orderB;
+  const symbolIds = (result.detected || []).map((d) =>
+    typeof d === "string" ? d : d.symbolId
+  );
+
+  const resolved = resolveInstructions({
+    symbolIds,
+    colour: confirmedColour(result.colour),
   });
+
+  interface DisplayRow {
+    symbol: CareSymbol;
+    instructionText: string;
+    confidence?: "high" | "medium" | "low";
+  }
+
+  const rows: DisplayRow[] = [];
+  for (const res of resolved) {
+    const symbol = getSymbolById(res.symbolId);
+    if (!symbol) {
+      console.warn(`ResultsDisplay: symbolId not found "${res.symbolId}"`);
+      continue;
+    }
+    rows.push({
+      symbol,
+      instructionText: res.text,
+      confidence: confidenceMap.get(res.symbolId),
+    });
+  }
 
   if (isPicking) {
     return (
@@ -129,7 +192,7 @@ export function ResultsDisplay({
 
       {rows.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "0 0 1.5rem 0" }}>
-          {rows.map(({ symbol, confidence }) => {
+          {rows.map(({ symbol, instructionText, confidence }) => {
             const isLow = confidence === "low";
             return (
               <div
@@ -168,7 +231,7 @@ export function ResultsDisplay({
                       color: "var(--color-text)",
                     }}
                   >
-                    {symbol.instruction}
+                    {instructionText}
                   </div>
                   {isLow && (
                     <div

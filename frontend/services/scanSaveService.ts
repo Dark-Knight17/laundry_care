@@ -1,5 +1,5 @@
 import { saveScan, updateScan, type SavedScan } from "./api.ts";
-import type { ScanResult } from "../../shared/types.ts";
+import type { DetectedColour, ScanResult } from "../../shared/types.ts";
 
 export type SaveStatus = "saving" | "saved" | "error";
 
@@ -150,6 +150,56 @@ class ScanSaveService {
       }
     } else {
       // No ID yet; screen is updated with new instructions, and Retry will save them
+      this.notify(scanSessionId);
+    }
+  }
+
+  /**
+   * Applies colour confirmation or change.
+   * If initial save is in flight, waits for it to finish then PATCHes.
+   * If save failed (no ID), only updates local state so Retry saves corrected data.
+   */
+  async applyColourCorrection(
+    scanSessionId: string,
+    colour: DetectedColour
+  ): Promise<void> {
+    const state = this.saves.get(scanSessionId);
+    if (!state) return;
+
+    state.scanResult = {
+      ...state.scanResult,
+      colour,
+    };
+
+    // Wait for in-flight save if currently running
+    const inFlight = this.inFlightPromises.get(scanSessionId);
+    if (inFlight) {
+      try {
+        await inFlight;
+      } catch {
+        // Handled in catch of initial save
+      }
+    }
+
+    // If an ID exists, update the saved record in the backend
+    if (state.savedRecordId) {
+      try {
+        const updated = await updateScan(state.savedRecordId, {
+          colour: {
+            colourId: colour.colourId,
+            pattern: colour.pattern,
+          },
+        });
+        state.savedScan = updated;
+        state.status = "saved";
+        this.notify(scanSessionId);
+        this.notifyGlobalSaved(updated);
+      } catch (err: any) {
+        console.error("Failed to update saved scan colour:", err);
+        this.notify(scanSessionId);
+      }
+    } else {
+      // No ID yet; screen is updated with new colour, and Retry will save it
       this.notify(scanSessionId);
     }
   }
