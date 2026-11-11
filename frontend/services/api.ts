@@ -10,18 +10,6 @@ export interface SavedScan {
   created_at: string;
 }
 
-export class ApiError extends Error {
-  status: number;
-  code?: string;
-
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
 export async function scanCareTag(
   imageBlob: Blob,
   accessToken?: string,
@@ -49,18 +37,16 @@ export async function scanCareTag(
   });
 
   if (!response.ok) {
-    let errorCode: string | undefined;
     let errorMsg = `Server error (${response.status})`;
     try {
       const errJson = await response.json();
       if (errJson && typeof errJson.error === "string") {
-        errorCode = errJson.error;
         errorMsg = errJson.error;
       }
     } catch {
       // ignore
     }
-    throw new ApiError(errorMsg, response.status, errorCode);
+    throw new Error(errorMsg);
   }
 
   const result: ScanResult = await response.json();
@@ -95,18 +81,16 @@ export async function saveScan(
   });
 
   if (!response.ok) {
-    let errorCode: string | undefined;
     let errorMsg = `Server error (${response.status})`;
     try {
       const errJson = await response.json();
       if (errJson && typeof errJson.error === "string") {
-        errorCode = errJson.error;
         errorMsg = errJson.error;
       }
     } catch {
       // ignore
     }
-    throw new ApiError(errorMsg, response.status, errorCode);
+    throw new Error(errorMsg);
   }
 
   return await response.json();
@@ -137,18 +121,16 @@ export async function updateScan(
   });
 
   if (!response.ok) {
-    let errorCode: string | undefined;
     let errorMsg = `Server error (${response.status})`;
     try {
       const errJson = await response.json();
       if (errJson && typeof errJson.error === "string") {
-        errorCode = errJson.error;
         errorMsg = errJson.error;
       }
     } catch {
       // ignore
     }
-    throw new ApiError(errorMsg, response.status, errorCode);
+    throw new Error(errorMsg);
   }
 
   return await response.json();
@@ -175,18 +157,16 @@ export async function deleteScan(
   });
 
   if (!response.ok) {
-    let errorCode: string | undefined;
     let errorMsg = `Server error (${response.status})`;
     try {
       const errJson = await response.json();
       if (errJson && typeof errJson.error === "string") {
-        errorCode = errJson.error;
         errorMsg = errJson.error;
       }
     } catch {
       // ignore
     }
-    throw new ApiError(errorMsg, response.status, errorCode);
+    throw new Error(errorMsg);
   }
 }
 
@@ -208,18 +188,16 @@ export async function fetchSavedScans(accessToken?: string): Promise<SavedScan[]
   });
 
   if (!response.ok) {
-    let errorCode: string | undefined;
     let errorMsg = `Server error (${response.status})`;
     try {
       const errJson = await response.json();
       if (errJson && typeof errJson.error === "string") {
-        errorCode = errJson.error;
         errorMsg = errJson.error;
       }
     } catch {
       // ignore
     }
-    throw new ApiError(errorMsg, response.status, errorCode);
+    throw new Error(errorMsg);
   }
 
   return await response.json();

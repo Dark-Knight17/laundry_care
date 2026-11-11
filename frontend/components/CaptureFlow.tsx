@@ -1,11 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ScanResult } from "../../shared/types.ts";
-import {
-  prepareImage,
-  TAG_PRESET,
-  GARMENT_PRESET,
-  mapScanUploadError,
-} from "../lib/imagePrep.ts";
+import { captureFrameBlob } from "../lib/camera.ts";
 import {
   pushScanStep,
   registerScanFlowListener,
@@ -235,63 +230,41 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
   const handleCaptureGarment = async () => {
     pushScanStep("garment_review");
     setError(null);
-    if (
-      !videoRef.current ||
-      videoRef.current.videoWidth === 0 ||
-      videoRef.current.videoHeight === 0
-    ) {
+    const blob = await captureFrameBlob(videoRef.current);
+    if (!blob) {
       window.history.back();
       setError("Unable to capture image from camera preview.");
       return;
     }
 
-    try {
-      const blob = await prepareImage(videoRef.current, GARMENT_PRESET);
-      if (garmentImageUrlRef.current) {
-        URL.revokeObjectURL(garmentImageUrlRef.current);
-      }
-      const url = URL.createObjectURL(blob);
-      garmentBlobRef.current = blob;
-      garmentImageUrlRef.current = url;
-      setGarmentBlob(blob);
-      setGarmentImageUrl(url);
-    } catch (err) {
-      window.history.back();
-      setError(mapScanUploadError(err));
+    if (garmentImageUrlRef.current) {
+      URL.revokeObjectURL(garmentImageUrlRef.current);
     }
+    const url = URL.createObjectURL(blob);
+    garmentBlobRef.current = blob;
+    garmentImageUrlRef.current = url;
+    setGarmentBlob(blob);
+    setGarmentImageUrl(url);
   };
 
   const handleCaptureTag = async () => {
     pushScanStep("tag_scanning");
     setError(null);
-    if (
-      !videoRef.current ||
-      videoRef.current.videoWidth === 0 ||
-      videoRef.current.videoHeight === 0
-    ) {
+    const blob = await captureFrameBlob(videoRef.current);
+    if (!blob) {
       window.history.back();
       setError("Unable to capture image from camera preview.");
       return;
     }
 
-    let blob: Blob;
-    let url: string;
-    try {
-      blob = await prepareImage(videoRef.current, TAG_PRESET);
-      if (tagImageUrlRef.current) {
-        URL.revokeObjectURL(tagImageUrlRef.current);
-      }
-      url = URL.createObjectURL(blob);
-      tagBlobRef.current = blob;
-      tagImageUrlRef.current = url;
-      setTagBlob(blob);
-      setTagImageUrl(url);
-    } catch (err) {
-      window.history.back();
-      setError(mapScanUploadError(err));
-      return;
+    if (tagImageUrlRef.current) {
+      URL.revokeObjectURL(tagImageUrlRef.current);
     }
-
+    const url = URL.createObjectURL(blob);
+    tagBlobRef.current = blob;
+    tagImageUrlRef.current = url;
+    setTagBlob(blob);
+    setTagImageUrl(url);
     setIsLoading(true);
 
     const controller = new AbortController();
@@ -320,7 +293,9 @@ export function CaptureFlow({ onScanComplete, onClose }: CaptureFlowProps) {
         return;
       }
       console.error("Scan request failed:", fetchErr);
-      setError(mapScanUploadError(fetchErr));
+      const message =
+        fetchErr instanceof Error ? fetchErr.message : "Failed to scan care tag";
+      setError(`Scan error: ${message}`);
       URL.revokeObjectURL(url);
       tagBlobRef.current = null;
       tagImageUrlRef.current = null;
